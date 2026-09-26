@@ -21,6 +21,7 @@ uvicorn app.main:app --reload        # http://localhost:8000/docs
 | Lint + format | `ruff check . && ruff format .` |
 | Tests (needs the db container) | `pytest -q` |
 | New migration (**M1 only**) | `alembic revision --autogenerate -m "add x"`, then hand-add CHECKs/triggers |
+| Rich demo data (**wipes everything**): 14 days of history, 20 products, 3 warehouses, open work on the board | `python -m app.seed_demo --yes` |
 | Reset DB | `docker compose down -v && docker compose up -d db && alembic upgrade head && python -m app.seed` |
 
 ## Layout
