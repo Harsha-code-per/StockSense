@@ -56,6 +56,9 @@
 | T-14 | Auth | — | 5 wrong passwords | 6th attempt 429 `TOO_MANY_ATTEMPTS` |
 | T-15 | OTP | OTP issued | wrong code ×5, then right code | 400 ×5 then 429; expired code → `OTP_EXPIRED` |
 | T-16 | Status | op `done` | PATCH / cancel | 409 `INVALID_STATE` |
+| T-17 | Move History | ledger with records | filter by type/warehouse/date & click Export CSV | downloads filtered CSV with Content-Disposition |
+| T-18 | Profile | authenticated user | update name with valid string / invalid length | updates name on 200 / displays validation error on 422 |
+| T-19 | Session Logout | authenticated user | click Sign Out in Profile | clears ss_session cookie & redirects to /login |
 
 ## Judge Q&A (prepare answers)
 

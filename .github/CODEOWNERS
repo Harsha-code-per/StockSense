@@ -17,14 +17,14 @@
 /docs/DEPLOYMENT.md                     @Harsha-code-per
 
 # ---------- Member 4: auth + dashboard (backend slice) ----------
-/backend/app/routes/auth.py             @member4-github
-/backend/app/routes/dashboard.py        @member4-github
-/backend/app/services/auth_service.py   @member4-github
-/backend/app/services/dashboard_service.py @member4-github
-/backend/app/services/email_service.py  @member4-github
-/backend/app/schemas/auth.py            @member4-github
-/backend/app/schemas/dashboard.py       @member4-github
-/backend/tests/test_auth.py             @member4-github
+/backend/app/routes/auth.py             @Cholan-kinnera
+/backend/app/routes/dashboard.py        @Cholan-kinnera
+/backend/app/services/auth_service.py   @Cholan-kinnera
+/backend/app/services/dashboard_service.py @Cholan-kinnera
+/backend/app/services/email_service.py  @Cholan-kinnera
+/backend/app/schemas/auth.py            @Cholan-kinnera
+/backend/app/schemas/dashboard.py       @Cholan-kinnera
+/backend/tests/test_auth.py             @Cholan-kinnera
 
 # ---------- Member 2: frontend shell, products, warehouses ----------
 /frontend/                              @member2-github
@@ -35,10 +35,10 @@
 /frontend/src/lib/operations.ts         @Sanjjith27
 
 # ---------- Member 4: auth + dashboard + history (frontend slice) ----------
-/frontend/src/app/(auth)/               @member4-github
-/frontend/src/app/(app)/dashboard/      @member4-github
-/frontend/src/app/(app)/history/        @member4-github
-/frontend/src/app/(app)/profile/        @member4-github
-/frontend/src/middleware.ts             @member4-github
-/frontend/src/proxy.ts                  @member4-github
-/docs/DEMO.md                           @member4-github
+/frontend/src/app/(auth)/               @Cholan-kinnera
+/frontend/src/app/(app)/dashboard/      @Cholan-kinnera
+/frontend/src/app/(app)/history/        @Cholan-kinnera
+/frontend/src/app/(app)/profile/        @Cholan-kinnera
+/frontend/src/middleware.ts             @Cholan-kinnera
+/frontend/src/proxy.ts                  @Cholan-kinnera
+/docs/DEMO.md                           @Cholan-kinnera
