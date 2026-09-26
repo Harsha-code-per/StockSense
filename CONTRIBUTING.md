@@ -1,100 +1,107 @@
-# Contributing
+# Contributing to StockSense
 
-Four people, seven hours, one `main`. These rules exist so nobody spends hour 6 resolving merge conflicts.
+Thanks for helping. This guide covers the workflow we use and the rules that keep the stock numbers correct.
 
-## 1. Golden rules
-1. **Edit only files you own** ([ownership map](docs/TEAM_PLAN.md#file-ownership)). CODEOWNERS will auto-request the owner's review if you don't.
-2. **Never commit to `main` directly.** Work on your branch, merge through a PR.
-3. **Rebase often** (about every 45 minutes) and push small PRs early.
-4. **The API contract is frozen** ([docs/API.md](docs/API.md)). Changing a field name means telling the team and updating the doc in the same PR.
-5. **No stock arithmetic in the frontend.** Stock changes only through `POST /api/operations/{id}/validate`.
-6. **Commit from your own GitHub account.** The judges look at who did what.
+## Ground rules
 
-## 2. Branches
+1. **Stock changes only through operations.** Nothing in the frontend, a script or a new endpoint may write `stock_balances` or `stock_ledger` directly. All changes go through `backend/app/services/operation_service.py`, inside one transaction. See [Inventory rules](docs/INVENTORY_RULES.md).
+2. **No stock arithmetic in the browser.** The frontend shows what the API returns. Display-only previews (such as a count difference) are fine; the server computes the real result.
+3. **The API contract is documented.** If you add or rename a field or endpoint, update [docs/API.md](docs/API.md) in the same pull request.
+4. **The database enforces the rules too.** When you add a model or a rule, add the matching constraint (CHECK, UNIQUE, FK) in a migration, not only a Python check.
+5. **`main` is always deployable.** Every merge deploys to production automatically.
 
-| Member | Branch |
-|---|---|
-| M1 | `feat/backend-core` (later `feat/inventory-engine`, `feat/ledger`, …) |
-| M2 | `feat/frontend-shell` (later `feat/products-ui`, `feat/warehouses-ui`, …) |
-| M3 | `feat/operations-ui` |
-| M4 | `feat/auth-dashboard` (later `feat/move-history`, `feat/otp-reset`, …) |
+## Workflow
 
-Short-lived is better: one branch per feature, merged within ~1 hour.
-
-## 3. Daily loop
+`main` is protected: changes land only through pull requests, and both CI workflows must pass (the required checks are `backend` and `check`, from `backend.yml` and `frontend.yml`).
 
 ```bash
-# start a feature
 git switch main && git pull
-git switch -c feat/<name>
+git switch -c feat/<short-name>          # or fix/, docs/, chore/, test/
 
-# ... work, commit small and often ...
-git add <your files>            # never `git add -A` blindly; check `git status` first
-git commit -m "feat(products): add SKU search"
+# work in small commits
+git add <files>                          # check `git status` first; never commit .env or *.db
+git commit -m "feat(inventory): explain why a delivery is waiting"
 
-# sync with main (every ~45 min and before opening a PR)
-git fetch origin
-git rebase origin/main          # resolve conflicts (should be rare if you stay in your files)
-git push --force-with-lease     # safe force push of your own rebased branch
-
-# open PR → CI green → owner/teammate approves → "Rebase and merge" (or "Create a merge commit")
+git fetch origin && git rebase origin/main   # stay current before opening the PR
+git push -u origin feat/<short-name>
 ```
 
-**Never "Squash and merge".** It collapses your commits into one authored by whoever clicks the button, which erases per-member history.
+Then open a pull request using the template. Every pull request gets a Vercel preview link and runs both CI workflows. Merge with **"Create a merge commit"** (or rebase-and-merge), **never squash**: squashing hides who wrote what.
 
-If a rebase goes wrong: `git rebase --abort` and ask for help. Don't force-push `main`, ever.
+Code owners (see [`.github/CODEOWNERS`](.github/CODEOWNERS)) are requested for review automatically when a pull request touches their area.
 
-## 4. Commit messages ([Conventional Commits](https://www.conventionalcommits.org/))
+## Commit messages
+
+We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-<type>(<scope>): <imperative summary, ≤ 72 chars>
+<type>(<scope>): <imperative summary, 72 characters or fewer>
 
-optional body: what and why
+Optional body: what changed and why.
 ```
 
-| type | use for |
+| Type | Use for |
 |---|---|
-| `feat` | new user-visible behavior |
-| `fix` | bug fix |
-| `refactor` | code change without behavior change |
-| `test` | tests only |
-| `docs` | documentation only |
-| `style` | formatting, no logic |
-| `chore` | deps, config, tooling |
-| `ci` | GitHub Actions |
+| `feat` | New behaviour users can see |
+| `fix` | A bug fix |
+| `refactor` | Code change with no behaviour change |
+| `test` | Tests only |
+| `docs` | Documentation only |
+| `chore` / `ci` | Tooling, dependencies, workflows |
 
-Scopes: `backend`, `db`, `inventory`, `operations`, `ledger`, `products`, `warehouses`, `auth`, `dashboard`, `ui`, `deploy`.
+Common scopes: `inventory`, `operations`, `ledger`, `products`, `warehouses`, `auth`, `dashboard`, `landing`, `ui`, `db`, `deploy`.
 
-Examples: `feat(inventory): validate deliveries with row locks`, `fix(auth): lock account after 5 failed logins`, `feat(ui): add status badges to receipts list`.
+## Run the checks locally
 
-## 5. Pull requests
-- Use the PR template checklist.
-- Keep a PR under ~300 changed lines when possible.
-- UI PRs include a screenshot.
-- Review within 10 minutes when tagged. A quick "LGTM + run it" beats a perfect review at hour 6.
-- CI (lint + tests + build) must be green before merge.
+CI runs exactly these, so run them before pushing.
 
-## 6. Code style
+**Backend** (`cd backend`, with PostgreSQL running via `docker compose up -d db`):
 
-### Python (backend)
-- Python 3.12, type hints everywhere, **ruff** for lint + format (`ruff check . && ruff format .`).
-- Layers: `routes → services → models` (see [ARCHITECTURE](docs/ARCHITECTURE.md#3-backend-layers)). Routes never touch the DB session for writes; services never raise `HTTPException`.
-- Names: `snake_case` functions/vars, `PascalCase` classes, plural table names, `*_id` for FKs.
-- Raise domain errors (`InsufficientStock`, `InvalidState`, …) from services; `errors.py` maps them to HTTP.
-- Every service function that changes stock has a pytest.
+```bash
+ruff check . && ruff format --check .
+alembic upgrade head && alembic check    # models and migrations agree
+pytest -q                                # uses a separate <db>_test database
+```
 
-### TypeScript (frontend)
-- Strict TS, **eslint** (Next.js config) + **prettier**.
-- Components `PascalCase.tsx`; hooks `useThing.ts`; route folders kebab-case.
-- API calls only via `lib/api.ts`; types only from `lib/types.ts` (they mirror `docs/API.md`, snake_case fields as-is, no renaming).
-- Forms: react-hook-form + zod; show server `field_errors` on the matching fields.
-- Use shadcn/ui primitives and Tailwind tokens. No ad-hoc colors (see UI conventions in ARCHITECTURE).
+**Frontend** (`cd frontend`):
 
-## 7. Dependencies
-All expected dependencies are added in the scaffold commits. Need a new one? Ask the file owner (M1 for `requirements.txt`, M2 for `package.json`). They add it in a tiny separate PR, so lockfile conflicts never happen in feature branches.
+```bash
+npm run lint
+npm test                                 # unit tests
+npm run build
+npm run test:e2e                         # Playwright: desktop, tablet and mobile
+```
 
-## 8. Database changes
-Only **Member 1** changes models or creates Alembic migrations (avoids "multiple heads"). Need a column? Ask M1.
+## Code style
 
-## 9. Secrets
-Never commit `.env`, keys, passwords or database files. Copy `.env.example` → `.env` locally. If a secret is committed by mistake: tell the team, rotate it, then remove it from the repo.
+**Python**
+- Python 3.12, type hints everywhere, formatted and linted with ruff.
+- Layers: routes (parse, authorize, call one service) → services (rules and transactions) → models. Routes never write to the database; services never raise `HTTPException`.
+- Raise domain errors (`InsufficientStock`, `InvalidState`, `ValidationFailed`, …) from services; `app/errors.py` turns them into the standard error response `{code, message, details, field_errors}`.
+- Every change to stock logic comes with a test that runs on real PostgreSQL.
+
+**TypeScript**
+- Strict TypeScript, ESLint and Prettier.
+- Call the backend only through `lib/api.ts`, with relative `/api/...` paths; types live in `lib/types.ts` and mirror the API exactly (snake_case).
+- Forms use react-hook-form and zod, and show server `field_errors` next to the matching field.
+- Use the shared UI components and Tailwind tokens; no one-off colours.
+- Animations must respect `prefers-reduced-motion`, and every drag-and-drop action needs a keyboard or button alternative.
+
+## Database changes
+
+Add or change a model, then create a migration and review it by hand. Autogenerate does not detect CHECK constraints or triggers.
+
+```bash
+alembic revision --autogenerate -m "add <thing>"
+alembic upgrade head && alembic downgrade -1 && alembic upgrade head
+```
+
+Coordinate migrations in the team channel so two branches don't create competing heads.
+
+## Security
+
+Never commit secrets, `.env` files or database dumps. Configuration comes from environment variables (see `backend/.env.example` and `frontend/.env.example`). If a secret is committed by mistake, tell the team, rotate it immediately, and then remove it from the history.
+
+## Reporting a bug
+
+Open an issue with the steps to reproduce, what you expected and what happened. For API errors, include the `X-Request-ID` response header: it matches the backend log line for that request.

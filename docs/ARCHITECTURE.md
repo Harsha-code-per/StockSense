@@ -20,7 +20,7 @@ flowchart LR
     subgraph Neon["Neon (free)"]
         P[(PostgreSQL 16)]
     end
-    S[[Gmail SMTP<br/>OTP email, optional]]
+    S[[Brevo SMTP relay<br/>OTP email, optional]]
     U -- HTTPS --> N
     N -- "/api/* proxied (same origin)" --> F
     F -- SQLAlchemy / psycopg --> P
@@ -139,7 +139,7 @@ sequenceDiagram
 - **Tailwind + shadcn/ui** for one consistent design system (buttons, inputs, dialogs, tables, badges, toasts via `sonner`).
 - **react-hook-form + zod** for every form: instant inline errors, then server `field_errors` mapped onto the same fields.
 - **Data fetching:** client components call `/api/...` through `lib/api.ts` (one `fetch` wrapper: JSON, credentials, error-shape parsing → throws `ApiError {code, message, field_errors}`). After a mutation: toast + refetch.
-- **Route protection:** `src/middleware.ts` (named `proxy.ts` on Next.js 16) redirects to `/login` when the `ss_session` cookie is absent. The API still enforces auth on every call.
+- **Route protection:** `src/proxy.ts` (Next.js 16's name for middleware) redirects to `/login` when the `ss_session` cookie is absent. The API still enforces auth on every call.
 
 ```text
 frontend/src/
@@ -157,7 +157,7 @@ frontend/src/
 ├── components/operations/  # OperationForm, LineEditor, StatusBadge (M3)
 ├── lib/api.ts  lib/types.ts                                 (M2)
 ├── lib/operations.ts                                        (M3)
-└── middleware.ts                                            (M4)
+└── proxy.ts                                                 (M4)
 ```
 
 ### UI conventions (consistency is judged)

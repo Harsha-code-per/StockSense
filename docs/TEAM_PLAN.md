@@ -12,8 +12,6 @@
 | **Member 3**: [@Sanjjith27](https://github.com/Sanjjith27) | Operations UI (Receipts, Deliveries, Transfers, Adjustments) | Warehouse tasks are fast and hard to get wrong |
 | **Member 4**: [@Cholan-kinnera](https://github.com/Cholan-kinnera) | Auth + Dashboard + Move History + QA/Demo | Secure entry, clear overview, and it all works end to end |
 
-> Teammates: replace your placeholder handle here, in `README.md` and in `.github/CODEOWNERS` as your **first commit**.
-
 ## File ownership
 
 Only the owner edits these paths. Need a change elsewhere? Ask the owner or open a PR and tag them.
@@ -36,7 +34,7 @@ Only the owner edits these paths. Need a change elsewhere? Ask the owner or open
 | `frontend/src/lib/{api,types}.ts` | M2 |
 | `frontend/src/app/(app)/{products,warehouses}/**` | M2 |
 | `frontend/src/app/(app)/operations/**`, `components/operations/**`, `lib/operations.ts` | M3 |
-| `frontend/src/app/(auth)/**`, `(app)/{dashboard,history,profile}/**`, `src/middleware.ts` | M4 |
+| `frontend/src/app/(auth)/**`, `(app)/{dashboard,history,profile}/**`, `src/proxy.ts` | M4 |
 | `docs/{ARCHITECTURE,DATA_MODEL,API,INVENTORY_RULES,DEPLOYMENT}.md` | M1 |
 | `docs/DEMO.md` | M4 |
 | `README.md`, `docs/{TEAM_PLAN,ROADMAP}.md` | M1 (anyone may PR) |
@@ -66,7 +64,7 @@ These are the only files everyone would otherwise touch. They are **pre-populate
 |---|---|---|---|---|
 | **0:00–0:20** | Everyone: read docs, create branch, first commit = own handle in CODEOWNERS/README/TEAM_PLAN | ← | ← | ← |
 | **0:20–1:00** | FastAPI scaffold, config, DB, **all models + first migration (with CHECKs + trigger)**, all stub routers in `main.py`, `docker-compose.yml`, CI `backend.yml`. **Merge by 1:00** | `create-next-app`, Tailwind, shadcn, layout + full sidebar + all placeholder pages, `lib/api.ts`, `lib/types.ts`, CI `frontend.yml`. **Merge by 1:00** | `components/operations/`: StatusBadge, LineEditor, OperationForm (mock data) | Login / Signup / Forgot-password UI with zod validation; draft `auth_service` logic |
-| **1:00–2:00** | products, categories, warehouses, locations, inventory endpoints + `seed.py` | Products list/create/edit, Warehouses + Locations pages (wired) | Receipts + Deliveries list & form pages (mock) | Auth endpoints wired to users table, cookie, `middleware.ts`, profile + logout |
+| **1:00–2:00** | products, categories, warehouses, locations, inventory endpoints + `seed.py` | Products list/create/edit, Warehouses + Locations pages (wired) | Receipts + Deliveries list & form pages (mock) | Auth endpoints wired to users table, cookie, `proxy.ts`, profile + logout |
 | **2:00–3:00** | `operation_service`: create / confirm / validate for receipt + delivery, ledger writes, sequence numbers, **pytest** | Product detail (stock by location, recent moves), stock badges | Wire receipts + deliveries to API (create → confirm → validate, available qty) | Dashboard API (KPI aggregates) + Dashboard page |
 | **3:00–3:30** | transfer + adjustment + cancel, `/inventory/integrity`, Steel Rod scenario test | UI consistency pass across pages | Transfers + Adjustments (system/counted/difference preview) | Move History page with filters; start end-to-end testing |
 | **3:30 ✅ CHECKPOINT** | **Full lifecycle works in the browser: create product → receive 100 → transfer 40 → deliver 20 → count 17 → total 77, ledger correct.** If not: everybody stops features and fixes this. | | | |

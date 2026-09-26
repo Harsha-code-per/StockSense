@@ -39,7 +39,7 @@ src/
 ├── components/operations/  OperationForm, LineEditor, StatusBadge   M3
 ├── lib/api.ts · lib/types.ts                                 M2
 ├── lib/operations.ts                                         M3
-└── middleware.ts           route protection (proxy.ts on Next 16)   M4
+└── proxy.ts                route protection (redirects to /login)   M4
 ```
 
 ## Rules
@@ -63,13 +63,12 @@ shared page, loading/error, and form conventions. New shadcn components must imp
 `cn` from `@/lib/utils`; reuse that utility rather than installing another package.
 
 Browser tests use contract-shaped responses only inside `tests/`. They cover desktop,
-tablet, and mobile layouts; the production app always calls the real API. Live login
-and complete inventory lifecycle verification require Members 3 and 4's implementations.
+tablet, and mobile layouts; the production app always calls the real API.
 
 ## Frontend deployment
 
-Import this repository into Vercel with Root Directory `frontend` and the Next.js
-preset. Set the server-only `BACKEND_URL` to the team's deployed backend origin;
-do not prefix it with `NEXT_PUBLIC_`. Vercel runs `npm run build`. All browser requests
-continue to use `/api/*` through the Next.js rewrite. Deployment account configuration
-and the final backend URL must be supplied by the team.
+Live at https://stocksense-eosin.vercel.app. Vercel builds from Root Directory `frontend`
+with the Next.js preset; merges to `main` deploy to production and every pull request gets a
+preview URL. The server-only `BACKEND_URL` (no `NEXT_PUBLIC_` prefix) points at the Render
+API, and all browser requests go through the `/api/*` rewrite. Full steps:
+[docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
