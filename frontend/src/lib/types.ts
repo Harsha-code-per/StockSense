@@ -126,6 +126,22 @@ export interface InventoryIntegrity {
   checked: number;
   mismatches: Record<string, unknown>[];
 }
+export interface CountPriorityItem {
+  product_id: number;
+  sku: string;
+  product_name: string;
+  uom: Uom;
+  location_id: number;
+  location_name: string;
+  quantity: Quantity;
+  last_counted_at: string | null;
+  days_since_count: number;
+  movements_since_count: number;
+  past_discrepancies: number;
+  score: number;
+  level: 'high' | 'medium' | 'low';
+  reasons: string[];
+}
 export interface OperationLineCreate {
   product_id: number;
   quantity?: QuantityInput;
