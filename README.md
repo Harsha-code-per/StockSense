@@ -2,94 +2,137 @@
 
 # StockSense
 
-**Every movement. Accounted for.**
+### Every movement. Accounted for.
 
-An accuracy-first inventory management system: receipts, deliveries, transfers and physical counts as validated operations, with an append-only ledger that can prove every number.
+A modular, accuracy-first **Inventory Management System** that replaces registers and spreadsheets with one real-time app.<br/>
+Receipts, deliveries, transfers and physical counts are validated operations on an append-only PostgreSQL ledger that can prove every number.
 
-[**Live app**](https://stocksense-eosin.vercel.app) · [**API docs**](https://stocksense-api-vs0b.onrender.com/docs) · [**Documentation**](#documentation)
+<br/>
+
+[![Live app](https://img.shields.io/badge/Live_app-stocksense--eosin.vercel.app-4338ca?style=for-the-badge&logo=vercel&logoColor=white)](https://stocksense-eosin.vercel.app)
+[![API docs](https://img.shields.io/badge/API_docs-OpenAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://stocksense-api-vs0b.onrender.com/docs)
 
 [![Backend CI](https://github.com/Harsha-code-per/StockSense/actions/workflows/backend.yml/badge.svg)](https://github.com/Harsha-code-per/StockSense/actions/workflows/backend.yml)
 [![Frontend CI](https://github.com/Harsha-code-per/StockSense/actions/workflows/frontend.yml/badge.svg)](https://github.com/Harsha-code-per/StockSense/actions/workflows/frontend.yml)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.12-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-4338ca.svg)](LICENSE)
-![Next.js](https://img.shields.io/badge/Next.js-16-black)
-![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-constraints%20%C2%B7%20row%20locks-336791)
 
-Built by a team of four for the **Odoo Hackathon 2026**.
+**Odoo Hackathon 2026** · Built by a team of four
+
+[Overview](#overview) · [Live demo](#live-demo) · [Evaluation criteria](#how-stocksense-meets-the-evaluation-criteria) · [Database design](#database-design) · [Architecture](#architecture) · [Getting started](#getting-started) · [Team](#team)
 
 </div>
 
 ---
 
-## Why StockSense
+## Overview
 
-Most small and mid-size businesses still run stock on registers, spreadsheets and memory. The numbers drift, nobody can say *why* a quantity changed, and a stock-out is discovered when a customer is already waiting.
+Small and mid-size businesses still track stock in registers, Excel sheets and memory. Numbers drift, nobody can explain why a quantity changed, and a stock-out is found when a customer is already waiting.
 
 StockSense is built on one rule:
 
-> **Stock only changes through validated operations.** Every receipt, delivery, internal transfer and physical count is applied in a single database transaction and written to an append-only ledger.
+> **Stock only changes through validated operations.** Every receipt, delivery, internal transfer and physical count is applied in a single database transaction and recorded in an append-only ledger.
 
-So at any moment the system can answer: *What do we have? Where is it? What is coming in or going out? Why did this number change?* And it can **prove** the answer: a live integrity check confirms that every balance equals the sum of its recorded movements.
+So the system can always answer *what do we have, where is it, what is coming in or going out, and why did this number change*. It can also **prove** it: a live integrity check confirms that every balance equals the sum of its recorded movements.
 
-## Try it in two minutes
+## Live demo
 
-Open **https://stocksense-eosin.vercel.app** and sign in:
+**App:** https://stocksense-eosin.vercel.app &nbsp;·&nbsp; **API (OpenAPI):** https://stocksense-api-vs0b.onrender.com/docs
 
 | Role | Email | Password |
 |---|---|---|
-| Manager | `manager@stocksense.dev` | `Manager@123` |
-| Staff | `staff@stocksense.dev` | `Staff@123` |
+| Inventory manager | `manager@stocksense.dev` | `Manager@123` |
+| Warehouse staff | `staff@stocksense.dev` | `Staff@123` |
 
-The live database holds two weeks of realistic activity (3 warehouses, 20 products, about 130 validated operations). Things to try:
+The live database holds two weeks of realistic activity: 3 warehouses, 9 locations, 20 products and about 130 validated operations.
 
-1. **Dashboard:** KPIs, a 14-day activity chart, the operation pipeline and the *Ledger reconciled ✓* badge. Filter by warehouse, category, type or status.
+> [!NOTE]
+> The API runs on a free tier and sleeps after 15 minutes idle. The first request can take about 50 seconds.
+
+**A two-minute tour**
+
+1. **Dashboard:** KPIs, 14-day activity chart, operation pipeline and the *Ledger reconciled* badge. Filter by document type, status, warehouse and category.
 2. **Reorder** a low-stock item in one click: a draft receipt for the suggested quantity opens, ready to validate.
-3. **Count next:** *Office Chair* is ranked **high risk**, with its reasons. Click *Record count*, enter a number and watch the difference preview.
-4. **Operations board:** drag a card to *Ready* to check availability, or to *Done* to validate it. Try validating the motor delivery: it is refused because there isn't enough stock.
-5. **The Steel Rod story:** receive 100 kg → transfer 40 → try to deliver 50 (refused) → deliver 20 → count 17 → **77 kg**. Then open **Move history** to see every step explained, and export it as CSV.
+3. **Count next:** *Office Chair* is ranked high risk, with its reasons. Record a count and see the difference before it is posted.
+4. **Operations board:** drag a card to *Ready* to check availability, or to *Done* to validate. The motor delivery is refused: there isn't enough stock.
+5. **The Steel Rod story** from the problem statement: receive 100 kg, transfer 40, try to deliver 50 (refused), deliver 20, count 17, **77 kg**. **Move history** then explains every step, and exports to CSV.
 6. Sign in as **staff** and try to validate an adjustment: only managers can.
 
-> The API runs on a free tier and sleeps after 15 minutes idle, so the first request can take about 50 seconds.
+## Problem statement coverage
 
-## Features
-
-**Everything the problem statement asks for**
-
-| Area | What you get |
+| Module | Delivered |
 |---|---|
-| **Authentication** | Sign up and log in; password reset with a 6-digit code sent by email; lockout after repeated failures; manager and staff roles |
-| **Dashboard** | Products in stock, low and out of stock, pending receipts and deliveries, scheduled transfers; filters by document type, status, warehouse and category |
-| **Products** | SKU, category (created inline), unit of measure, opening stock, stock per location, and reordering rules (min / max) with a suggested order quantity |
-| **Receipts** | Goods from vendors: create, validate, stock rises |
-| **Delivery orders** | Availability check (*Waiting* / *Ready*) before anything leaves; overselling is refused |
-| **Internal transfers** | Rack to rack or warehouse to warehouse; the company total never changes |
-| **Stock adjustments** | Enter the physical count and see the difference before it is posted |
-| **Move history** | Who, when, what, from where to where, and the balance after; filters and CSV export |
-| **Settings** | Multiple warehouses, each with its own locations (racks, floors, zones) |
-| **Search & alerts** | SKU and name search, smart filters on every list, low-stock alerts |
+| **Authentication** | Sign up, log in, logout; OTP password reset by email; redirect to the dashboard; manager and staff roles |
+| **Dashboard** | Products in stock, low / out of stock, pending receipts, pending deliveries, scheduled transfers; filters by document type, status, warehouse or location, and category |
+| **Products** | Name, SKU, category, unit of measure, optional initial stock; stock per location; categories; reordering rules (min / max) |
+| **Receipts** | Supplier and products, quantities received, validate → stock increases |
+| **Delivery orders** | Pick and pack (availability check: *Waiting* / *Ready*), validate → stock decreases; overselling is refused |
+| **Internal transfers** | Warehouse to production floor, rack to rack, warehouse to warehouse; company total unchanged; every movement in the ledger |
+| **Stock adjustments** | Select product and location, enter the counted quantity; the difference is posted and logged |
+| **Move history** | Who, when, what, from where to where, balance after; filters and CSV export |
+| **Settings** | Multiple warehouses, each with its own locations |
+| **Profile** | My profile, logout |
+| **Additional features** | Low-stock alerts, multi-warehouse support, SKU search and smart filters on every list |
 
 **Beyond the brief**
 
-| Feature | Why it matters |
+| Feature | What it adds |
 |---|---|
-| **Count next** | Ranks which shelves to count first using movements since the last count, days since the last count and past count discrepancies, and shows the reasons in plain language. Explainable, not a black box. |
+| **Count next** | Ranks which shelves to count first from movements since the last count, days since the last count and past discrepancies, with reasons in plain language. Rule-based and explainable, not a black box. |
 | **One-click reorder** | Turns a low-stock alert into a draft receipt for the suggested quantity. |
-| **Operations board** | A Kanban of Draft → Waiting → Ready → Done. Drag to confirm or validate; buttons cover keyboard and touch. |
-| **Activity charts** | Validated operations per day by type, with hover detail and a table view; the open pipeline by stage. |
+| **Operations board** | Kanban of Draft → Waiting → Ready → Done. Drag to confirm or validate, with buttons for keyboard and touch. |
+| **Activity charts** | Validated operations per day by type and the open pipeline by stage, with a table view. |
 | **Integrity proof** | A live check that every balance equals the sum of its ledger movements. |
-| **Cinematic landing page** | WebGL hero and a scroll-driven story (GSAP) that walks through the Steel Rod example, with full reduced-motion support. |
-| **Odoo-style documents** | References such as `WH/IN/0001`; statuses Draft → Waiting / Ready → Done. |
+| **Idempotent validation** | Validating twice returns the first result and moves nothing. |
+| **Cinematic landing page** | WebGL hero and a GSAP scroll story of the Steel Rod example, with full reduced-motion support. |
 
-## Why the numbers can be trusted
+## How StockSense meets the evaluation criteria
 
-Correctness is enforced in layers, down to the database itself:
+| Criterion | How we address it |
+|---|---|
+| **Database design** | 11 normalized tables in PostgreSQL. Business rules enforced by the database itself: `CHECK` constraints (no negative stock, valid statuses, which locations each operation type may use), unique references, foreign keys, indexes on every hot filter, and a trigger that makes the ledger append-only. [Details](#database-design) |
+| **Real backend, no BaaS** | Our own FastAPI service, schema, migrations, authentication and transactions. PostgreSQL runs in Docker locally and on Neon (plain Postgres) in production. |
+| **Minimal third-party APIs** | Own auth, own charts (hand-built SVG), own business logic. The only external service is an SMTP relay for OTP email, and it falls back to the console when not configured. |
+| **Real-time, dynamic data** | Every screen reads live data from PostgreSQL through the API. No static JSON; mocks exist only inside tests. |
+| **Robust input validation** | Three layers: instant form feedback in the browser (zod), server validation (Pydantic) with field-level messages mapped back onto the form, and database constraints as the last line of defence. |
+| **Logic** | One `operation_service` is the only code allowed to change stock: status lifecycle, availability checks, atomic multi-line moves, running balances and Odoo-style references (`WH/IN/0001`). |
+| **Modularity** | Thin routes → services that own every transaction → SQLAlchemy models. Frontend split into route groups, shared UI components, a typed API client and feature modules. |
+| **Coding standards** | Type hints and strict TypeScript throughout; ruff, ESLint and Prettier enforced in CI; Conventional Commits. |
+| **Security** | bcrypt passwords, httpOnly `Secure` session cookie, server-side role checks, hashed one-time codes with expiry and attempt limits, login lockout, no user enumeration, CORS limited to the app's own domain. |
+| **Performance** | Server-side pagination on every list, indexed filters, aggregates computed in SQL, eager loading to avoid N+1 queries, pooled connections. |
+| **Scalability** | Stateless API; locks live in the database, so they stay correct across multiple instances; locks are taken in a fixed order, so concurrent validations never deadlock. |
+| **Usability & front-end design** | One consistent design system and status colour scheme, clear sidebar navigation, loading, empty and error states, toasts that state the stock effect, responsive on desktop, tablet and mobile. |
+| **Debugging** | Every response carries an `X-Request-ID` that matches its log line; one standard error format `{code, message, details, field_errors}`; health and integrity endpoints. |
+| **CI/CD** | GitHub Actions on every pull request (lint, migrations up / down / up, backend tests, frontend build, browser tests). Protected `main`; every merge deploys automatically to Vercel and Render. |
+| **Git as a team sport** | All four members commit from their own accounts on short-lived feature branches merged through pull requests, with file ownership per member (CODEOWNERS) to avoid merge conflicts. |
 
-- **All or nothing.** Each validation is one PostgreSQL transaction. A transfer can never decrease the source without increasing the destination.
-- **Safe under concurrency.** Operation and balance rows are locked in a fixed order, so two people can't ship the same last unit and the database never deadlocks.
-- **Double clicks are harmless.** Validating an operation twice returns the original result and moves nothing.
-- **The database has the last word.** `CHECK (quantity >= 0)`, a per-type rule for which locations an operation may use, unique references, and a trigger that makes the ledger **append-only**.
-- **Validated twice.** Instant form feedback in the browser (zod) and server validation (Pydantic), with field-level messages.
-- **Secure by default.** bcrypt passwords, an httpOnly `Secure` session cookie, server-side role checks, hashed one-time codes with expiry and attempt limits, no user enumeration, and CORS limited to the app's own domain.
+## Database design
+
+```mermaid
+erDiagram
+    USERS ||--o{ PASSWORD_RESETS : requests
+    USERS ||--o{ OPERATIONS : creates
+    CATEGORIES ||--o{ PRODUCTS : groups
+    WAREHOUSES ||--|{ LOCATIONS : contains
+    PRODUCTS ||--o{ STOCK_BALANCES : "stocked as"
+    LOCATIONS ||--o{ STOCK_BALANCES : holds
+    OPERATIONS ||--|{ OPERATION_LINES : has
+    PRODUCTS ||--o{ OPERATION_LINES : "moved in"
+    OPERATIONS ||--o{ STOCK_LEDGER : posts
+    PRODUCTS ||--o{ STOCK_LEDGER : records
+    LOCATIONS ||--o{ STOCK_LEDGER : records
+```
+
+- **Balances plus a ledger.** `stock_balances` holds the current quantity per product and location; `stock_ledger` holds every signed movement with the balance after it. The integrity check proves that the two always agree.
+- **Rules in the schema.** `CHECK (quantity >= 0)` on balances, one `CHECK` per operation type for its allowed source and destination, `status = 'done'` if and only if `validated_at` is set, exactly one of quantity or counted quantity per line, and format checks on SKUs and warehouse codes.
+- **Append-only history.** A trigger rejects any `UPDATE` or `DELETE` on the ledger. Mistakes are corrected with a new adjustment, never by editing the past.
+- **Exact quantities.** `NUMERIC(18,3)` for kilograms and litres, never floating point.
+- **Sequential references.** A per-warehouse, per-type counter row, locked on use, generates `WH/IN/0001`, `WH/OUT/0001` and so on inside the same transaction.
+- **Migrations.** Alembic, with constraints and the trigger written by hand, and CI applying, rolling back and re-applying every migration.
+
+Every table, column, constraint and index: [docs/DATA_MODEL.md](docs/DATA_MODEL.md)
 
 ## Architecture
 
@@ -98,40 +141,32 @@ flowchart LR
     U[Browser] --> N["Next.js on Vercel<br/>UI + /api proxy"]
     N --> F["FastAPI on Render<br/>routes → services → ORM"]
     F --> P[("PostgreSQL on Neon<br/>constraints · row locks · append-only ledger")]
-    F -. OTP email .-> M[Brevo SMTP relay]
+    F -. OTP email .-> M[SMTP relay]
 ```
 
-- **Modular monolith.** One FastAPI service with clear layers: thin routes, a service layer that owns every transaction, and SQLAlchemy models. A single `operation_service` is the only code allowed to change stock.
+- **Modular monolith.** One FastAPI service in clear layers; the service layer owns every transaction.
 - **Same-origin by design.** The browser only talks to the Next.js app, which proxies `/api/*` to the backend, so the session cookie stays first-party.
-- **No backend-as-a-service.** The schema, business rules, authentication and transactions are all our own code.
+- **All or nothing.** Each validation is one transaction with the affected rows locked, so a transfer can never take stock from one place without adding it to the other, and two users can never ship the same last unit.
 
-Details: [Architecture](docs/ARCHITECTURE.md) · [Data model](docs/DATA_MODEL.md) · [Inventory rules](docs/INVENTORY_RULES.md) · [API contract](docs/API.md)
+More: [Architecture](docs/ARCHITECTURE.md) · [Inventory rules](docs/INVENTORY_RULES.md) · [API contract](docs/API.md)
 
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, react-hook-form + zod, sonner |
-| Motion & graphics | GSAP (ScrollTrigger, SplitText), Motion, a hand-written WebGL shader, hand-built SVG charts |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, react-hook-form + zod |
+| Motion & graphics | GSAP, Motion, a hand-written WebGL shader, hand-built SVG charts |
 | Backend | FastAPI, Pydantic v2, SQLAlchemy 2, Alembic |
-| Database | PostgreSQL (Neon in production, Docker locally) |
-| Auth & email | Own JWT session cookie, bcrypt, one-time codes by email (Brevo SMTP relay) |
-| Quality | pytest on real PostgreSQL, Playwright, ruff, ESLint, strict TypeScript |
-| Delivery | GitHub Actions → Vercel (frontend) + Render (backend) + Neon (database), all on free tiers |
+| Database | PostgreSQL 16 (Docker locally, Neon in production) |
+| Auth | Own JWT session cookie, bcrypt, email one-time codes |
+| Quality | pytest on real PostgreSQL, Playwright, ruff, ESLint, Prettier |
+| Delivery | GitHub Actions, Vercel, Render, Neon (all free tiers) |
 
-## Quality
+## Testing and CI/CD
 
-- **76 backend tests** run against real PostgreSQL, including:
-  - the full Steel Rod story and every rule in the acceptance matrix;
-  - two users racing for the last units (exactly one wins);
-  - multi-line transfers that roll back completely;
-  - a ledger that rejects edits, and the login lockout under parallel attempts.
-- **96 browser tests** (desktop, tablet and mobile) with Playwright, plus unit tests for the API client and the redirect guard.
-- **CI on every pull request:**
-  - lint and format;
-  - migrations applied, rolled back and re-applied;
-  - backend tests, frontend build and browser tests.
-- **Protected `main`:** changes land only through pull requests with both checks green, and every merge deploys automatically.
+- **76 backend tests** on real PostgreSQL: the full Steel Rod story, every rule in the acceptance matrix, two users racing for the last units (exactly one wins), multi-line transfers that roll back completely, a ledger that rejects edits, and login lockout under parallel attempts.
+- **96 browser tests** with Playwright across desktop, tablet and mobile, plus unit tests for the API client and the route guard.
+- **On every pull request:** lint and format, migrations up / down / up, backend tests, frontend build and browser tests. Both checks must pass before anything reaches `main`, and every merge deploys automatically.
 
 ## Getting started
 
@@ -161,17 +196,17 @@ npm run dev                                    # http://localhost:3000
 | Frontend checks | `cd frontend && npm run lint && npm test && npm run build` |
 | Browser tests | `npm run test:e2e` |
 
-Environment variables and the free deployment setup: [Deployment](docs/DEPLOYMENT.md).
+Environment variables and the free deployment setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## Project structure
 
 ```text
 StockSense/
-├── backend/        FastAPI app: routes, services (stock engine), models, Alembic migrations, tests
-├── frontend/       Next.js app: landing, auth, dashboard, products, operations, board, history
-├── docs/           Architecture, data model, API contract, inventory rules, deployment, demo
-├── .github/        CI workflows, CODEOWNERS, pull request template
-├── render.yaml     Backend deployment as code (Render Blueprint)
+├── backend/          FastAPI: routes, services (stock engine), models, Alembic migrations, tests
+├── frontend/         Next.js: landing, auth, dashboard, products, operations, board, history
+├── docs/             Architecture, data model, API contract, inventory rules, deployment, demo
+├── .github/          CI workflows, CODEOWNERS, pull request template
+├── render.yaml       Backend deployment as code
 └── docker-compose.yml
 ```
 
@@ -181,22 +216,22 @@ StockSense/
 |---|---|
 | [Architecture](docs/ARCHITECTURE.md) | Layers, request flow, transactions and locking, security, frontend structure |
 | [Data model](docs/DATA_MODEL.md) | Every table, constraint, index and trigger, with an ER diagram |
-| [API contract](docs/API.md) | All endpoints with request and response examples and error codes |
-| [Inventory rules](docs/INVENTORY_RULES.md) | Status lifecycle, stock arithmetic, invariants, validation rules, roles |
-| [Deployment](docs/DEPLOYMENT.md) | Local setup, CI/CD and the free Vercel + Render + Neon setup |
+| [API contract](docs/API.md) | All endpoints with examples and error codes |
+| [Inventory rules](docs/INVENTORY_RULES.md) | Status lifecycle, stock arithmetic, invariants, validation, roles |
+| [Deployment](docs/DEPLOYMENT.md) | Local setup, CI/CD, Vercel + Render + Neon |
 | [Demo guide](docs/DEMO.md) | Demo script, demo data, acceptance tests |
-| [Team](docs/TEAM_PLAN.md) | Who built what, ownership, and how we worked |
-| [Roadmap](docs/ROADMAP.md) | What shipped, assumptions, and what comes next |
-| [Contributing](CONTRIBUTING.md) | Branches, commits, pull requests and code style |
+| [Team plan](docs/TEAM_PLAN.md) | Roles, file ownership and how we worked |
+| [Roadmap](docs/ROADMAP.md) | What shipped, assumptions, what comes next |
+| [Contributing](CONTRIBUTING.md) | Branches, commits, pull requests, code style |
 
 ## Team
 
 | Member | Focus | GitHub |
 |---|---|---|
-| Harshavardhan K | Backend, database and stock engine; deployment and CI; auth pages, dashboard insights and landing page | [@Harsha-code-per](https://github.com/Harsha-code-per) |
-| Loktrishal K | Frontend foundation and design system; products, warehouses, motion and end-to-end tests | [@loktrishal-05](https://github.com/loktrishal-05) |
-| Sanjjith B | Operations: receipts, deliveries, transfers and adjustments | [@Sanjjith27](https://github.com/Sanjjith27) |
-| Cholan Abhaynadh Kinnera | Authentication and dashboard APIs; dashboard, move history and profile; QA | [@Cholan-kinnera](https://github.com/Cholan-kinnera) |
+| **Harshavardhan K** | Backend, database and stock engine; deployment and CI; auth pages, dashboard insights and landing page | [@Harsha-code-per](https://github.com/Harsha-code-per) |
+| **Loktrishal K** | Frontend foundation and design system; products, warehouses, motion and end-to-end tests | [@loktrishal-05](https://github.com/loktrishal-05) |
+| **Sanjjith B** | Operations: receipts, deliveries, transfers and adjustments | [@Sanjjith27](https://github.com/Sanjjith27) |
+| **Cholan Abhaynadh Kinnera** | Authentication and dashboard APIs; dashboard, move history and profile; QA | [@Cholan-kinnera](https://github.com/Cholan-kinnera) |
 
 ## License
 
