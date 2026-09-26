@@ -10,7 +10,7 @@
 | Frontend | `npm run dev` → http://localhost:3000 | **Vercel** Hobby → `https://stocksense-eosin.vercel.app` |
 | Backend | `uvicorn app.main:app --reload` → http://localhost:8000 | **Render** free web service → `https://stocksense-api-vs0b.onrender.com` |
 | Database | PostgreSQL 16 in **Docker** (`docker compose up -d db`) | **Neon** free Postgres (plain Postgres over a connection string) |
-| Email (OTP) | printed to backend console | Gmail SMTP with an app password (optional; console fallback otherwise) |
+| Email (OTP) | printed to backend console | Brevo SMTP relay on port 2525 (free; Render blocks the usual SMTP ports) |
 
 > **Is Neon a BaaS?** No. Neon only hosts a standard PostgreSQL server. We connect with a normal `postgresql://` URL through SQLAlchemy, and our own backend owns the schema, migrations, auth and business logic. Nothing about the app is Neon-specific; switching to any other Postgres host is a one-line env change. Fallback host: Render's free Postgres (expires after 30 days, fine for the event).
 
@@ -74,9 +74,9 @@ volumes:
 | `JWT_EXPIRE_MINUTES` | `480` | 8 hours |
 | `COOKIE_SECURE` | `false` locally, `true` in prod | |
 | `FRONTEND_ORIGIN` | `http://localhost:3000` | Only used for CORS when calling the API directly (not needed via rewrites) |
-| `SMTP_HOST` / `SMTP_PORT` | `smtp.gmail.com` / `587` | Leave empty to print OTPs to the console |
-| `SMTP_USER` / `SMTP_PASSWORD` | team Gmail + app password | Never commit |
-| `SMTP_FROM` | `StockSense <team@gmail.com>` | |
+| `SMTP_HOST` / `SMTP_PORT` | `smtp-relay.brevo.com` / `2525` | Leave empty to print OTPs to the console. **Render's free tier blocks outbound SMTP on 25/465/587**, so Gmail SMTP can't work there; Brevo's free relay (300 emails/day) also accepts 2525 |
+| `SMTP_USER` / `SMTP_PASSWORD` | Brevo SMTP login + SMTP key (Brevo → Settings → SMTP & API) | Never commit |
+| `SMTP_FROM` | `StockSense <harshavardhan3259@gmail.com>` (must be a verified sender in Brevo) | |
 
 ### Frontend (`frontend/.env.local`)
 | Var | Example | Notes |
@@ -140,7 +140,7 @@ The service is defined as code in [`render.yaml`](../render.yaml) (a Render Blue
    |---|---|
    | `DATABASE_URL` | the Neon pooled string from 4a |
    | `FRONTEND_ORIGIN` | the Vercel URL once it exists (e.g. `https://stocksense-xyz.vercel.app`); any placeholder until then |
-   | `SMTP_*` | leave empty to log OTPs to the Render log (fine for the demo), or Gmail SMTP + app password |
+   | `SMTP_*` | Brevo relay: `SMTP_HOST=smtp-relay.brevo.com`, `SMTP_PORT=2525`, your Brevo SMTP login/key, a verified `SMTP_FROM`. Leave empty to log OTPs to the Render log instead |
 3. **Apply**. The first deploy takes ~3 min. Check `https://stocksense-api-vs0b.onrender.com/api/health` → `{"status":"ok","db":"ok"}`; `/` opens the Swagger docs.
 
 Safety net: with `COOKIE_SECURE=true` the app refuses to start on the development JWT secret.
