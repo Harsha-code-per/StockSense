@@ -69,7 +69,7 @@ volumes:
 ### Backend (`backend/.env`)
 | Var | Example | Notes |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+psycopg://stocksense:stocksense@localhost:5432/stocksense` | Neon: use the **pooled** string, keep `?sslmode=require`, and change the scheme to `postgresql+psycopg://` |
+| `DATABASE_URL` | `postgresql+psycopg://stocksense:stocksense@localhost:5432/stocksense` | Neon: paste the **pooled** string as-is (`postgresql://…?sslmode=require`); the app switches the scheme to the psycopg driver itself |
 | `JWT_SECRET` | 64 random chars | `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Different in prod |
 | `JWT_EXPIRE_MINUTES` | `480` | 8 hours |
 | `COOKIE_SECURE` | `false` locally, `true` in prod | |
@@ -121,28 +121,29 @@ flowchart LR
 
 ### 4a. Database: Neon (once, M1)
 1. Sign up at neon.tech → **New project** `stocksense`, Postgres 16, region closest to Render (e.g. AWS Singapore / `ap-southeast-1`).
-2. Copy the **pooled** connection string. Change `postgresql://` to `postgresql+psycopg://`.
-3. Seed it from your laptop (Render free has no shell):
+2. **Dashboard → Connect** → tick **Connection pooling** → copy the connection string (`postgresql://…-pooler…neon.tech/…?sslmode=require…`). Paste it as-is; no editing needed.
+3. Migrate and seed it from your laptop (Render free has no shell):
    ```bash
    cd backend
-   DATABASE_URL='postgresql+psycopg://...neon.tech/stocksense?sslmode=require' alembic upgrade head
-   DATABASE_URL='postgresql+psycopg://...neon.tech/stocksense?sslmode=require' python -m app.seed
+   export DATABASE_URL='postgresql://...-pooler...neon.tech/neondb?sslmode=require'   # fish: set -x DATABASE_URL '...'
+   alembic upgrade head
+   python -m app.seed          # skips itself if data already exists
    ```
-   (fish: `env DATABASE_URL='...' alembic upgrade head`)
+   Render also runs `alembic upgrade head` on every deploy, so later migrations apply automatically.
 
 ### 4b. Backend: Render (once, M1)
-1. render.com → **New → Web Service** → connect the GitHub repo.
-2. Settings:
-   | Field | Value |
+The service is defined as code in [`render.yaml`](../render.yaml) (a Render Blueprint): free plan, root dir `backend`, build/start commands, health check `/api/health`, auto-deploy **only after CI passes**, and a generated `JWT_SECRET`.
+
+1. render.com → sign in with GitHub → **New → Blueprint** → pick this repo → branch `main`.
+2. Render reads `render.yaml` and asks for the secrets marked `sync: false`:
+   | Var | Value |
    |---|---|
-   | Root Directory | `backend` |
-   | Runtime | Python 3 |
-   | Build Command | `pip install -r requirements.txt` |
-   | Start Command | `alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-   | Instance Type | **Free** |
-   | Health Check Path | `/api/health` |
-   | Auto-Deploy | **After CI checks pass** |
-3. Environment: `PYTHON_VERSION=3.12.7`, `DATABASE_URL` (Neon), `JWT_SECRET` (new random), `COOKIE_SECURE=true`, SMTP vars if used.
+   | `DATABASE_URL` | the Neon pooled string from 4a |
+   | `FRONTEND_ORIGIN` | the Vercel URL once it exists (e.g. `https://stocksense-xyz.vercel.app`); any placeholder until then |
+   | `SMTP_*` | leave empty to log OTPs to the Render log (fine for the demo), or Gmail SMTP + app password |
+3. **Apply**. The first deploy takes ~3 min. Check `https://stocksense-api.onrender.com/api/health` → `{"status":"ok","db":"ok"}`; `/` opens the Swagger docs.
+
+Safety net: with `COOKIE_SECURE=true` the app refuses to start on the development JWT secret.
 
 ### 4c. Frontend: Vercel (once, M2)
 1. vercel.com → **Add New Project** → import the repo.

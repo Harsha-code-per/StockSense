@@ -6,6 +6,7 @@ import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from app.config import settings
 from app.errors import register_exception_handlers
@@ -61,6 +62,12 @@ async def request_context(request: Request, call_next):
 
 
 register_exception_handlers(app)
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse("/docs")
+
 
 for module in (
     health,
