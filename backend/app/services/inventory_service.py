@@ -3,10 +3,12 @@
 Stock is WRITTEN only by operation_service. Nothing here mutates balances.
 """
 
+import csv
+import io
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import Subquery, func, select, text
+from sqlalchemy import Select, Subquery, func, select, text
 from sqlalchemy.orm import Session, contains_eager
 
 from app.models import Location, Operation, Product, StockBalance, StockLedger, Warehouse
@@ -144,9 +146,7 @@ def recent_moves(db: Session, product_id: int, limit: int = 10) -> list[LedgerEn
     return [ledger_entry_out(e) for e in rows]
 
 
-def list_ledger(
-    db: Session,
-    paging: PageParams,
+def ledger_query(
     *,
     product_id: int | None = None,
     location_id: int | None = None,
@@ -156,8 +156,8 @@ def list_ledger(
     search: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-) -> Page[LedgerEntryOut]:
-    """Move history, newest first."""
+) -> Select:
+    """Filtered move history, newest first. Shared by the list and the CSV export."""
     stmt = select(StockLedger).order_by(StockLedger.id.desc())
     if product_id is not None:
         stmt = stmt.where(StockLedger.product_id == product_id)
@@ -189,13 +189,65 @@ def list_ledger(
         stmt = stmt.where(StockLedger.created_at >= date_from)
     if date_to:
         stmt = stmt.where(StockLedger.created_at < date_to + timedelta(days=1))
-    rows, total = paginate(db, stmt, paging)
+    return stmt
+
+
+def list_ledger(db: Session, paging: PageParams, **filters) -> Page[LedgerEntryOut]:
+    rows, total = paginate(db, ledger_query(**filters), paging)
     return Page(
         items=[ledger_entry_out(r[0]) for r in rows],
         total=total,
         page=paging.page,
         page_size=paging.page_size,
     )
+
+
+CSV_EXPORT_LIMIT = 50_000
+_CSV_COLUMNS = [
+    "timestamp_utc",
+    "reference",
+    "movement_type",
+    "sku",
+    "product",
+    "uom",
+    "location",
+    "from_to",
+    "quantity_delta",
+    "balance_after",
+    "user",
+]
+
+
+def _cell(value: str) -> str:
+    """Neutralize spreadsheet formula injection (=, +, -, @) in user-entered text."""
+    return f"'{value}" if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
+
+def export_ledger_csv(db: Session, **filters) -> str:
+    """Move history as CSV (same filters as the list)."""
+    # ponytail: built in memory and capped at CSV_EXPORT_LIMIT rows; stream it if exports grow.
+    rows = db.scalars(ledger_query(**filters).limit(CSV_EXPORT_LIMIT))
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(_CSV_COLUMNS)
+    for e in rows:
+        entry = ledger_entry_out(e)
+        writer.writerow(
+            [
+                entry.created_at.isoformat(),
+                entry.reference,
+                entry.movement_type,
+                _cell(entry.sku),
+                _cell(entry.product_name),
+                entry.uom,
+                _cell(entry.location_name),
+                _cell(entry.counterpart_location_name or ""),
+                f"{entry.quantity_delta:.3f}",
+                f"{entry.balance_after:.3f}",
+                _cell(entry.created_by.name),
+            ]
+        )
+    return buf.getvalue()
 
 
 _INTEGRITY_SQL = text(

@@ -166,12 +166,23 @@ Creating a warehouse also creates its default location `Stock`.
 | GET | `/api/inventory` | auth | `product_id, location_id, warehouse_id, category_id, search, hide_zero (default true), page, page_size` | `Page<Balance>` |
 | GET | `/api/inventory/available` | auth | `product_id, location_id` (both required) | `{ "product_id": 12, "location_id": 1, "quantity": "60.000" }`, used by forms to show "Available: 60 kg" |
 | GET | `/api/inventory/integrity` | auth | — | `{ "ok": true, "checked": 42, "mismatches": [] }` |
+| GET | `/api/inventory/count-priority` | auth | `warehouse_id, limit (1–100, default 20)` | `CountPriorityItem[]`: which product-locations to physically count next, highest score first |
 
 ```json
 // Balance
 { "product_id": 12, "sku": "STL001", "product_name": "Steel Rod", "uom": "kg",
   "location_id": 1, "location_name": "WH/Stock", "warehouse_id": 1, "quantity": "60.000" }
 ```
+
+```json
+// CountPriorityItem: explainable rule score (see backend/app/services/count_priority_service.py)
+{ "product_id": 12, "sku": "STL001", "product_name": "Steel Rod", "uom": "kg",
+  "location_id": 4, "location_name": "WH/Production Floor", "quantity": "17.000",
+  "last_counted_at": null, "days_since_count": 3, "movements_since_count": 7, "past_discrepancies": 0,
+  "score": 18, "level": "low",
+  "reasons": ["Never counted (first movement 3 days ago)", "7 movements since last count"] }
+```
+`score` = 100 × (0.40 × movements since last count ÷ 20 + 0.35 × days since last count ÷ 30 + 0.25 × past count discrepancies ÷ 3), each factor capped at 1. `level`: high ≥ 60, medium ≥ 30, else low. Opening stock is not a discrepancy.
 
 ## Operations
 
@@ -241,7 +252,7 @@ Creating a warehouse also creates its default location `Stock`.
 | Method | Path | Access | Query | Returns |
 |---|---|---|---|---|
 | GET | `/api/ledger` | auth | `product_id, location_id, warehouse_id, movement_type, operation_id, search, date_from, date_to, page, page_size` | `Page<LedgerEntry>` (newest first) |
-| GET | `/api/ledger/export.csv` | auth | same filters | `text/csv` (P1) |
+| GET | `/api/ledger/export.csv` | auth | same filters | `text/csv` download (max 50 000 rows; text cells starting with `= + - @` are prefixed with `'` against spreadsheet formula injection) |
 
 ```json
 // LedgerEntry
