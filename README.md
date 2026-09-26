@@ -121,7 +121,7 @@ StockSense/
 | Member | Role | GitHub |
 |---|---|---|
 | Member 1 | Backend, database & inventory engine | [@Harsha-code-per](https://github.com/Harsha-code-per) |
-| Member 2 | Frontend shell, products & warehouses, deployment | @member2-github |
+| Member 2 | Frontend shell, products & warehouses, deployment | [@loktrishal-05](https://github.com/loktrishal-05) |
 | Member 3 | Operations UI (receipts, deliveries, transfers, adjustments) | [@Sanjjith27](https://github.com/Sanjjith27) |
 | Member 4 | Auth, dashboard, move history, QA & demo | @member4-github |
 
