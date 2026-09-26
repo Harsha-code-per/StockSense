@@ -1,3 +1,5 @@
+from datetime import date
+
 from app.schemas.common import ApiModel, Qty
 from app.schemas.operation import OperationSummary
 
@@ -27,3 +29,22 @@ class DashboardSummary(ApiModel):
     low_stock_items: list[LowStockItem]
     recent_operations: list[OperationSummary]
     ledger_ok: bool
+
+
+class ActivityDay(ApiModel):
+    date: date
+    receipt: int = 0
+    delivery: int = 0
+    transfer: int = 0
+    adjustment: int = 0
+
+
+class Pipeline(ApiModel):
+    draft: int = 0
+    waiting: int = 0
+    ready: int = 0
+
+
+class DashboardActivity(ApiModel):
+    days: list[ActivityDay]
+    pipeline: Pipeline

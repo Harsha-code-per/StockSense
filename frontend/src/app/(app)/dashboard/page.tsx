@@ -47,6 +47,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useApi } from '@/components/ui/useApi';
+import { ActivityCharts } from '@/components/dashboard/ActivityCharts';
 import type {
   Category,
   DashboardSummary,
@@ -514,6 +515,8 @@ export default function DashboardPage() {
               </KpiTiltCard>
             </div>
           </section>
+
+          <ActivityCharts warehouseId={warehouseId} />
 
           {/* Low Stock Items & Count Next Split Grid */}
           <div className="grid gap-8 lg:grid-cols-3">

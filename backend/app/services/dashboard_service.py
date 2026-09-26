@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -6,7 +7,14 @@ from sqlalchemy.orm import Session
 from app.enums import OPEN_STATUSES
 from app.models import Operation, OperationLine, Product
 from app.schemas.common import PageParams
-from app.schemas.dashboard import DashboardKpis, DashboardSummary, LowStockItem
+from app.schemas.dashboard import (
+    ActivityDay,
+    DashboardActivity,
+    DashboardKpis,
+    DashboardSummary,
+    LowStockItem,
+    Pipeline,
+)
 from app.services import inventory_service, operation_service
 from app.services.inventory_service import on_hand_subquery, stock_status, suggested_order
 
@@ -106,4 +114,37 @@ def get_dashboard_summary(
         low_stock_items=low_stock_items,
         recent_operations=recent_ops_page.items,
         ledger_ok=integrity_result.ok,
+    )
+
+
+def get_activity(
+    db: Session, *, days: int = 14, warehouse_id: int | None = None
+) -> DashboardActivity:
+    """Validated operations per day by type (last `days` days, UTC) and the open pipeline."""
+    today = datetime.now(UTC).date()
+    first = today - timedelta(days=days - 1)
+    day = func.date(func.timezone("UTC", Operation.validated_at))
+    done = (
+        select(day.label("day"), Operation.type, func.count())
+        .where(Operation.status == "done", Operation.validated_at >= first)
+        .group_by(day, Operation.type)
+    )
+    open_ops = (
+        select(Operation.status, func.count())
+        .where(Operation.status.in_(OPEN_STATUSES))
+        .group_by(Operation.status)
+    )
+    if warehouse_id is not None:
+        done = done.where(Operation.warehouse_id == warehouse_id)
+        open_ops = open_ops.where(Operation.warehouse_id == warehouse_id)
+
+    by_day = {
+        first + timedelta(days=i): ActivityDay(date=first + timedelta(days=i)) for i in range(days)
+    }
+    for d, op_type, n in db.execute(done):
+        if d in by_day:
+            setattr(by_day[d], op_type, n)
+    return DashboardActivity(
+        days=list(by_day.values()),
+        pipeline=Pipeline(**{status: n for status, n in db.execute(open_ops)}),
     )
