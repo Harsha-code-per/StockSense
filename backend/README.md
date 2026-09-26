@@ -5,10 +5,10 @@ FastAPI + SQLAlchemy 2 + Alembic + PostgreSQL 16.
 
 ## Run locally
 ```bash
-docker compose up -d db              # from repo root
+docker compose up -d db              # from repo root (port busy? DB_PORT=5433 docker compose up -d db)
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime + pytest/ruff
 cp .env.example .env
 alembic upgrade head                 # create schema (tables, CHECKs, indexes, ledger trigger)
 python -m app.seed                   # demo users, warehouses, products, opening stock
@@ -30,7 +30,9 @@ app/
 ├── config.py      settings from env
 ├── database.py    engine + session dependency
 ├── deps.py        current user, role guard
-├── errors.py      domain errors → error JSON
+├── errors.py      domain errors → error JSON (+ DB unique violations → DUPLICATE)
+├── security.py    bcrypt, JWT, session cookie helpers (used by auth_service)
+├── enums.py       roles, UOMs, operation types/statuses (shared by DB CHECKs and schemas)
 ├── models/        tables (M1 only)
 ├── schemas/       request/response models
 ├── services/      business logic; operation_service is the ONLY writer of stock

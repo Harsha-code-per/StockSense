@@ -20,7 +20,7 @@ Only the owner edits these paths. Need a change elsewhere? Ask the owner or open
 
 | Path | Owner |
 |---|---|
-| `backend/app/{main,config,database,deps,errors}.py` | M1 |
+| `backend/app/{main,config,database,deps,errors,security,enums}.py` | M1 |
 | `backend/app/models/**`, `backend/alembic/**` | M1 |
 | `backend/app/schemas/**` (except `auth.py`, `dashboard.py`) | M1 |
 | `backend/app/schemas/{auth,dashboard}.py` | M4 |
@@ -29,7 +29,8 @@ Only the owner edits these paths. Need a change elsewhere? Ask the owner or open
 | `backend/app/routes/{products,categories,warehouses,locations,inventory,operations,ledger,health}.py` | M1 |
 | `backend/app/routes/{auth,dashboard}.py` | M4 |
 | `backend/app/seed.py`, `backend/tests/**` (auth tests: M4 in `tests/test_auth.py`) | M1 |
-| `backend/requirements.txt`, `docker-compose.yml`, `.github/workflows/**` | M1 |
+| `backend/requirements*.txt`, `backend/pyproject.toml`, `docker-compose.yml`, `.github/workflows/backend.yml` | M1 |
+| `.github/workflows/frontend.yml` | M2 |
 | `frontend/` scaffold, `package.json`, `next.config.ts`, `tailwind`/`components.json` | M2 |
 | `frontend/src/app/(app)/layout.tsx`, `components/layout/**`, `components/ui/**` | M2 |
 | `frontend/src/lib/{api,types}.ts` | M2 |
@@ -46,7 +47,7 @@ These are the only files everyone would otherwise touch. They are **pre-populate
 | File | Wired by | Contains from the start |
 |---|---|---|
 | `backend/app/main.py` | M1 | `include_router` for **every** router in API.md (auth + dashboard as empty stubs for M4) |
-| `backend/requirements.txt` | M1 | all backend deps incl. M4's (`pyjwt`, `passlib[bcrypt]`, `email-validator`) |
+| `backend/requirements.txt` | M1 | all backend deps incl. M4's (`pyjwt`, `bcrypt`, `pydantic[email]`) |
 | `frontend/package.json` | M2 | all frontend deps incl. `react-hook-form`, `zod`, `@hookform/resolvers`, `sonner`, `lucide-react`, `date-fns` |
 | `frontend/src/components/layout/Sidebar.tsx` | M2 | **every** nav link |
 | `frontend/src/app/(app)/**/page.tsx` | M2 | placeholder page for **every** route, which the owner then replaces |
@@ -64,7 +65,7 @@ These are the only files everyone would otherwise touch. They are **pre-populate
 | Time | M1 Backend/DB | M2 Frontend shell | M3 Operations UI | M4 Auth/Dashboard/QA |
 |---|---|---|---|---|
 | **0:00–0:20** | Everyone: read docs, create branch, first commit = own handle in CODEOWNERS/README/TEAM_PLAN | ← | ← | ← |
-| **0:20–1:00** | FastAPI scaffold, config, DB, **all models + first migration (with CHECKs + trigger)**, all stub routers in `main.py`, `docker-compose.yml`, CI backend job. **Merge by 1:00** | `create-next-app`, Tailwind, shadcn, layout + full sidebar + all placeholder pages, `lib/api.ts`, `lib/types.ts`, CI frontend job. **Merge by 1:00** | `components/operations/`: StatusBadge, LineEditor, OperationForm (mock data) | Login / Signup / Forgot-password UI with zod validation; draft `auth_service` logic |
+| **0:20–1:00** | FastAPI scaffold, config, DB, **all models + first migration (with CHECKs + trigger)**, all stub routers in `main.py`, `docker-compose.yml`, CI `backend.yml`. **Merge by 1:00** | `create-next-app`, Tailwind, shadcn, layout + full sidebar + all placeholder pages, `lib/api.ts`, `lib/types.ts`, CI `frontend.yml`. **Merge by 1:00** | `components/operations/`: StatusBadge, LineEditor, OperationForm (mock data) | Login / Signup / Forgot-password UI with zod validation; draft `auth_service` logic |
 | **1:00–2:00** | products, categories, warehouses, locations, inventory endpoints + `seed.py` | Products list/create/edit, Warehouses + Locations pages (wired) | Receipts + Deliveries list & form pages (mock) | Auth endpoints wired to users table, cookie, `middleware.ts`, profile + logout |
 | **2:00–3:00** | `operation_service`: create / confirm / validate for receipt + delivery, ledger writes, sequence numbers, **pytest** | Product detail (stock by location, recent moves), stock badges | Wire receipts + deliveries to API (create → confirm → validate, available qty) | Dashboard API (KPI aggregates) + Dashboard page |
 | **3:00–3:30** | transfer + adjustment + cancel, `/inventory/integrity`, Steel Rod scenario test | UI consistency pass across pages | Transfers + Adjustments (system/counted/difference preview) | Move History page with filters; start end-to-end testing |

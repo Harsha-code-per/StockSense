@@ -9,6 +9,7 @@
 /backend/                               @Harsha-code-per
 /docker-compose.yml                     @Harsha-code-per
 /.github/workflows/                     @Harsha-code-per
+/.github/workflows/frontend.yml         @member2-github
 /docs/ARCHITECTURE.md                   @Harsha-code-per
 /docs/DATA_MODEL.md                     @Harsha-code-per
 /docs/API.md                            @Harsha-code-per

@@ -22,12 +22,12 @@ Prerequisites: Git, Docker, Python 3.12, Node 20+.
 git clone <repo-url> && cd StockSense
 
 # Database (Postgres 16 on localhost:5432)
-docker compose up -d db
+docker compose up -d db          # port 5432 busy? DB_PORT=5433 docker compose up -d db, and use :5433 in DATABASE_URL
 
 # Backend
 cd backend
 python -m venv .venv && source .venv/bin/activate      # fish: source .venv/bin/activate.fish · Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt                    # runtime deps + pytest/ruff
 cp .env.example .env
 alembic upgrade head
 python -m app.seed
@@ -95,16 +95,17 @@ export default nextConfig;
 
 ## 3. CI: GitHub Actions (free for public repos)
 
-`.github/workflows/ci.yml` runs on every push and PR:
+Two workflows run on every push to `main` and every PR: `.github/workflows/backend.yml` (M1) and `.github/workflows/frontend.yml` (M2). They are separate files, so the two owners never edit the same file:
 
 ```mermaid
 flowchart LR
     PR[push / pull_request] --> B[backend job]
     PR --> F[frontend job]
-    B --> B1[setup Python 3.12] --> B2[pip install] --> B3[ruff check] --> B4["alembic upgrade head<br/>(Postgres 16 service container)"] --> B5[pytest]
+    B --> B1[setup Python 3.12] --> B2[pip install] --> B3[ruff check + format] --> B4["alembic upgrade → downgrade → upgrade → check<br/>(Postgres 16 service container)"] --> B5[pytest]
     F --> F1[setup Node 20] --> F2[npm ci] --> F3[npm run lint] --> F4[npm run build]
 ```
 
+- Tests use a separate `<db>_test` database (created automatically), so running `pytest` locally never wipes your dev data.
 - The backend job uses a `postgres:16` **service container**, so tests run against real Postgres, including CHECK constraints, the ledger trigger and row locks.
 - Branch protection on `main` (repo Settings → Branches): require the `backend` and `frontend` checks to pass and require 1 approval.
 

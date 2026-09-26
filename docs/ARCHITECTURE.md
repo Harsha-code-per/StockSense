@@ -64,6 +64,8 @@ backend/
 │   ├── database.py          # engine, SessionLocal, get_db dependency (M1)
 │   ├── deps.py              # get_current_user, require_role("manager") (M1)
 │   ├── errors.py            # DomainError hierarchy → error JSON (M1)
+│   ├── security.py          # bcrypt, JWT encode/decode, session cookie helpers (M1; used by M4)
+│   ├── enums.py             # roles, UOMs, operation types/statuses, shared by CHECKs + schemas (M1)
 │   ├── models/              # SQLAlchemy models, one file per aggregate (M1)
 │   ├── schemas/             # Pydantic request/response models (M1; auth/dashboard schemas M4)
 │   ├── services/
@@ -171,7 +173,7 @@ frontend/src/
 
 | Area | Control |
 |---|---|
-| Passwords | bcrypt (passlib), min 8 chars with a letter and a digit; never logged |
+| Passwords | bcrypt (`app/security.py`), min 8 chars with a letter and a digit; never logged |
 | Session | JWT (HS256, `JWT_SECRET` from env, 8 h expiry) in httpOnly, `SameSite=Lax`, `Secure` (prod) cookie; not readable by JS (XSS can't steal it) |
 | CSRF | SameSite=Lax + JSON-only mutation endpoints (forms can't forge `application/json`); same-origin via rewrites |
 | Brute force | 5 failed logins → 15-min lock; OTP max 5 attempts, 10-min expiry, stored hashed; forgot-password never reveals whether an email exists |
