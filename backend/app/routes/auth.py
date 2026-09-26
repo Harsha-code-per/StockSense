@@ -33,7 +33,7 @@ def login(data: LoginIn, db: DbSession, response: Response) -> UserOut:
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(_: CurrentUser, response: Response) -> Response:
+def logout(response: Response) -> Response:
     clear_session_cookie(response)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response

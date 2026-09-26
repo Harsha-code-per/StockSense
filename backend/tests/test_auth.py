@@ -387,3 +387,143 @@ def test_dashboard_filters(manager):
     r_empty = manager.get("/api/dashboard/summary", params={"warehouse_id": 99999})
     assert r_empty.status_code == 200
     assert r_empty.json()["kpis"]["pending_receipts"] == 0
+
+
+def test_logout_with_bad_cookie(client):
+    # 1. No cookie at all -> 204
+    client.cookies.clear()
+    r = client.post("/api/auth/logout")
+    assert r.status_code == 204
+
+    # 2. Forged / invalid cookie -> 204 without 401 error
+    client.cookies.set(SESSION_COOKIE, "forged.bad.token")
+    r2 = client.post("/api/auth/logout")
+    assert r2.status_code == 204
+
+
+def test_concurrent_login_lockout():
+    from concurrent.futures import ThreadPoolExecutor
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as c:
+        c.post(
+            "/api/auth/signup",
+            json={"name": "Race User", "email": "race@test.dev", "password": "CorrectPass123"},
+        )
+
+    def attempt_login():
+        with TestClient(app) as c:
+            return c.post(
+                "/api/auth/login",
+                json={"email": "race@test.dev", "password": "WrongPassword123"},
+            ).status_code
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        statuses = list(executor.map(lambda _: attempt_login(), range(10)))
+
+    # All requests should return either 401 (unauthorized) or 429 (locked)
+    assert all(s in (401, 429) for s in statuses)
+    assert statuses.count(401) <= 5
+
+    with TestClient(app) as c:
+        locked_res = c.post(
+            "/api/auth/login",
+            json={"email": "race@test.dev", "password": "WrongPassword123"},
+        )
+        assert locked_res.status_code == 429
+        assert locked_res.json()["code"] == "TOO_MANY_ATTEMPTS"
+
+
+def test_concurrent_otp_rate_limiting(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    captured = []
+    monkeypatch.setattr(
+        "app.services.auth_service.send_otp_email",
+        lambda email, otp: captured.append((email, otp)),
+    )
+
+    with TestClient(app) as c:
+        c.post(
+            "/api/auth/signup",
+            json={"name": "OTP Race", "email": "otprace@test.dev", "password": "Password123"},
+        )
+        c.post("/api/auth/forgot-password", json={"email": "otprace@test.dev"})
+
+    def attempt_otp():
+        with TestClient(app) as c:
+            return c.post(
+                "/api/auth/verify-otp",
+                json={"email": "otprace@test.dev", "otp": "000000"},
+            ).status_code
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        statuses = list(executor.map(lambda _: attempt_otp(), range(10)))
+
+    assert all(s in (400, 429) for s in statuses)
+    assert statuses.count(400) <= 5
+
+    with TestClient(app) as c:
+        r = c.post(
+            "/api/auth/verify-otp",
+            json={"email": "otprace@test.dev", "otp": "000000"},
+        )
+        assert r.status_code == 429
+
+
+def test_dashboard_products_in_stock_seed_like(manager):
+    from tests.helpers import run, setup_world
+
+    w = setup_world(manager)
+    # STL001 (min 20) -> on_hand 0 -> out
+    # CHR001 (min 0) -> on_hand 0 -> out
+
+    p_in1 = manager.post(
+        "/api/products",
+        json={
+            "sku": "PIN001",
+            "name": "In Stock 1",
+            "uom": "unit",
+            "min_qty": "10",
+            "max_qty": "100",
+        },
+    ).json()["id"]
+    p_in2 = manager.post(
+        "/api/products",
+        json={
+            "sku": "PIN002",
+            "name": "In Stock 2",
+            "uom": "unit",
+            "min_qty": "10",
+            "max_qty": "100",
+        },
+    ).json()["id"]
+    p_low = manager.post(
+        "/api/products",
+        json={
+            "sku": "PLOW01",
+            "name": "Low Stock",
+            "uom": "unit",
+            "min_qty": "50",
+            "max_qty": "100",
+        },
+    ).json()["id"]
+
+    run(manager, "receipt", [{"product_id": p_in1, "quantity": "50"}], dst=w["loc"]["Stock"])
+    run(manager, "receipt", [{"product_id": p_in2, "quantity": "30"}], dst=w["loc"]["Stock"])
+    run(manager, "receipt", [{"product_id": p_low, "quantity": "20"}], dst=w["loc"]["Stock"])
+
+    r = manager.get("/api/dashboard/summary")
+    assert r.status_code == 200
+    kpis = r.json()["kpis"]
+    # 2 "in_stock" + 1 "low" = 3 products_in_stock!
+    assert kpis["products_in_stock"] == 3
+    assert kpis["low_stock"] == 1
+    assert kpis["out_of_stock"] == 2

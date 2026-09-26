@@ -58,9 +58,9 @@ def get_dashboard_summary(
 
     for prod, qty in products_with_stock:
         status = stock_status(qty, prod.min_qty)
-        if status == "in_stock":
+        if status in ("in_stock", "low"):
             in_stock_count += 1
-        elif status == "low":
+        if status == "low":
             low_stock_count += 1
             low_stock_items.append(
                 LowStockItem(

@@ -49,7 +49,9 @@ def signup(db: Session, data: SignupIn) -> User:
 def login(db: Session, data: LoginIn) -> User:
     """Authenticate user with email and password. Lock out after 5 consecutive failures."""
     normalized_email = data.email.strip().lower()
-    user = db.scalar(select(User).where(func.lower(User.email) == normalized_email))
+    user = db.scalar(
+        select(User).where(func.lower(User.email) == normalized_email).with_for_update()
+    )
     if not user or not user.is_active:
         raise Unauthorized("Invalid email or password.")
 
@@ -132,6 +134,7 @@ def _get_active_password_reset(db: Session, email: str) -> tuple[User, PasswordR
         .where(PasswordReset.user_id == user.id, PasswordReset.used_at.is_(None))
         .order_by(PasswordReset.created_at.desc())
         .limit(1)
+        .with_for_update()
     )
     if not reset_entry:
         raise OtpInvalid("Invalid or expired OTP.")
