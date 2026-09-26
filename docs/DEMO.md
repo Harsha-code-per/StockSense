@@ -71,12 +71,12 @@
 | Why PostgreSQL? | Row-level locks for concurrent validation, exact NUMERIC for kg/litres, CHECK constraints and a trigger that enforce rules even if app code is wrong. |
 | What stops double-counting on a double click? | Operation row lock + `done` guard → second call is a no-op (`already_done`). |
 | How do you know stock is right? | Every change is a ledger row; `/inventory/integrity` proves Σ ledger = balance for every product-location. |
-| Where is the AI? | Not in the core, on purpose (per guidelines). Our optional extension is an explainable cycle-count priority score (movement frequency, days since count, past adjustments), shown with its reasons, not presented as magic. |
+| Where is the AI? | Not in the core, on purpose (per guidelines). What we ship is the "Count next" list: a rule-based, explainable cycle-count priority (movements since the last count, days since the last count, past discrepancies), shown with its reasons, not presented as magic. |
 | How would this scale? | Stateless FastAPI instances behind one Postgres; locks live in the DB so they work across instances; indexed, paginated queries; path to read replicas. |
 | What would you add next? | Barcode/QR scanning, returns, lot/expiry tracking, role configuration, CSV import from existing spreadsheets. |
 
 ## Claims to avoid
 - "Real-time" beyond what we do (we do: every read reflects committed data immediately; no WebSockets).
-- "AI-powered", unless the risk score is implemented, and then only "rule-based, explainable".
+- "AI-powered". Describe Count next as "rule-based, explainable".
 - "Better than Odoo/ERPNext". Say "inspired by established ERP flows (Odoo-style references and states)".
 - Any accuracy-improvement percentage without a measured experiment.

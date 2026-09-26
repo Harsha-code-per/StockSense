@@ -23,13 +23,20 @@
 - [x] Ledger CSV export
 - [ ] Low-stock bell in header with count
 - [ ] "Late" operations (scheduled_date < today and not done) highlighted
-- [ ] Suggested reorder quantity on low-stock list → one click creates a draft receipt
+- [x] Suggested reorder quantity on low-stock list → one click creates a draft receipt
 - [ ] Keyboard shortcuts / quick SKU search in header
 
 ## P2: only if everything else is solid
 - [x] **Explainable cycle-count priority** (`GET /api/inventory/count-priority`, "Count next" card on the dashboard) (the only "smart" feature): rule-based score per product-location from days since last count, movements in the last 30 days, past adjustment count and magnitude, shown with its reasons ("63 days since count · 27 movements · 3 past corrections"). Evaluate against oldest-count-first and random baselines at equal budget K (Recall@K / Precision@K) before claiming improvement.
 - [ ] QR/barcode scan of SKU and location in operation forms (browser camera)
 - [ ] Returns (reverse of a done delivery/receipt)
+
+## Shipped beyond the plan
+- [x] Operations board: Kanban of Draft / Waiting / Ready / Done, drag to confirm or validate, with button alternatives for keyboard and touch
+- [x] Dashboard activity charts: validated operations per day by type (`GET /api/dashboard/activity`) and the open pipeline by stage
+- [x] Cinematic landing page: WebGL hero and a GSAP scroll story of the Steel Rod example, with reduced-motion support
+- [x] Full-viewport video backgrounds on login, signup and password reset
+- [x] Rich demo dataset (`python -m app.seed_demo --yes`): two weeks of activity created through the real operation engine
 
 ## Out of scope (say so if asked)
 Purchasing/sales modules, invoicing/accounting/GST, CRM, serial/lot/expiry tracking, unit conversions, reservations/backorders, wave picking, multi-step routes, RFID, demand forecasting, LLM chatbot, blockchain, offline mode, WebSockets.
