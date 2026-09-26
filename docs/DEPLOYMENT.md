@@ -7,7 +7,7 @@
 
 | | Local dev | Production (demo) |
 |---|---|---|
-| Frontend | `npm run dev` → http://localhost:3000 | **Vercel** Hobby → `https://stocksense-<team>.vercel.app` |
+| Frontend | `npm run dev` → http://localhost:3000 | **Vercel** Hobby → `https://stocksense-eosin.vercel.app` |
 | Backend | `uvicorn app.main:app --reload` → http://localhost:8000 | **Render** free web service → `https://stocksense-api-vs0b.onrender.com` |
 | Database | PostgreSQL 16 in **Docker** (`docker compose up -d db`) | **Neon** free Postgres (plain Postgres over a connection string) |
 | Email (OTP) | printed to backend console | Gmail SMTP with an app password (optional; console fallback otherwise) |
@@ -145,7 +145,20 @@ The service is defined as code in [`render.yaml`](../render.yaml) (a Render Blue
 
 Safety net: with `COOKIE_SECURE=true` the app refuses to start on the development JWT secret.
 
-### 4c. Frontend: Vercel (once, M2)
+### 4c. Frontend: Vercel (once)
+Done with the Vercel CLI from the repo root (`npx vercel login` first):
+```bash
+npx vercel project add stocksense
+npx vercel api /v9/projects/stocksense -X PATCH --input - <<< '{"rootDirectory":"frontend","framework":"nextjs"}'
+npx vercel link --yes --project stocksense
+printf 'https://stocksense-api-vs0b.onrender.com' | npx vercel env add BACKEND_URL production --yes
+printf 'https://stocksense-api-vs0b.onrender.com' | npx vercel env add BACKEND_URL preview --yes
+npx vercel git connect --yes      # merges to main auto-deploy; PRs get preview URLs
+npx vercel deploy --prod --yes
+```
+`BACKEND_URL` must exist **before** the build: Next.js bakes rewrites into the build output.
+
+Dashboard alternative:
 1. vercel.com → **Add New Project** → import the repo.
 2. Root Directory `frontend`, framework preset **Next.js** (auto-detected).
 3. Environment variable `BACKEND_URL=https://stocksense-api-vs0b.onrender.com`.
