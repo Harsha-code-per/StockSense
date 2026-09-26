@@ -8,7 +8,7 @@
 | | Local dev | Production (demo) |
 |---|---|---|
 | Frontend | `npm run dev` → http://localhost:3000 | **Vercel** Hobby → `https://stocksense-<team>.vercel.app` |
-| Backend | `uvicorn app.main:app --reload` → http://localhost:8000 | **Render** free web service → `https://stocksense-api.onrender.com` |
+| Backend | `uvicorn app.main:app --reload` → http://localhost:8000 | **Render** free web service → `https://stocksense-api-vs0b.onrender.com` |
 | Database | PostgreSQL 16 in **Docker** (`docker compose up -d db`) | **Neon** free Postgres (plain Postgres over a connection string) |
 | Email (OTP) | printed to backend console | Gmail SMTP with an app password (optional; console fallback otherwise) |
 
@@ -141,20 +141,20 @@ The service is defined as code in [`render.yaml`](../render.yaml) (a Render Blue
    | `DATABASE_URL` | the Neon pooled string from 4a |
    | `FRONTEND_ORIGIN` | the Vercel URL once it exists (e.g. `https://stocksense-xyz.vercel.app`); any placeholder until then |
    | `SMTP_*` | leave empty to log OTPs to the Render log (fine for the demo), or Gmail SMTP + app password |
-3. **Apply**. The first deploy takes ~3 min. Check `https://stocksense-api.onrender.com/api/health` → `{"status":"ok","db":"ok"}`; `/` opens the Swagger docs.
+3. **Apply**. The first deploy takes ~3 min. Check `https://stocksense-api-vs0b.onrender.com/api/health` → `{"status":"ok","db":"ok"}`; `/` opens the Swagger docs.
 
 Safety net: with `COOKIE_SECURE=true` the app refuses to start on the development JWT secret.
 
 ### 4c. Frontend: Vercel (once, M2)
 1. vercel.com → **Add New Project** → import the repo.
 2. Root Directory `frontend`, framework preset **Next.js** (auto-detected).
-3. Environment variable `BACKEND_URL=https://stocksense-api.onrender.com`.
+3. Environment variable `BACKEND_URL=https://stocksense-api-vs0b.onrender.com`.
 4. Deploy. Every PR now also gets a preview URL.
 
 Because Vercel proxies `/api/*` to Render, the browser only ever talks to the Vercel domain: cookies are first-party and no CORS config is needed.
 
 ## 5. Demo-day checklist
-- [ ] **Warm up Render 2 minutes before judging**: open `https://stocksense-api.onrender.com/api/health`. The free tier sleeps after 15 min idle, and the first request takes ~30–60 s.
+- [ ] **Warm up Render 2 minutes before judging**: open `https://stocksense-api-vs0b.onrender.com/api/health`. The free tier sleeps after 15 min idle, and the first request takes ~30–60 s.
 - [ ] Log in on the Vercel URL with the demo manager account.
 - [ ] `GET /api/inventory/integrity` returns `"ok": true`.
 - [ ] Fallback: the full stack runs locally in two commands if the network fails.
