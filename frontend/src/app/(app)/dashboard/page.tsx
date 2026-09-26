@@ -36,7 +36,9 @@ import type {
   Category,
   DashboardSummary,
   OperationStatus,
+  OperationSummary,
   OperationType,
+  Page,
   Warehouse,
 } from '@/lib/types';
 
@@ -105,10 +107,14 @@ function formatDate(dateStr: string | null | undefined): string {
 export default function DashboardPage() {
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
+  const [operationType, setOperationType] = useState<string>('');
+  const [operationStatus, setOperationStatus] = useState<string>('');
 
   const params = new URLSearchParams();
   if (warehouseId) params.set('warehouse_id', warehouseId);
   if (categoryId) params.set('category_id', categoryId);
+  if (operationType) params.set('type', operationType);
+  if (operationStatus) params.set('status', operationStatus);
   const queryString = params.toString();
   const summaryPath = `/api/dashboard/summary${queryString ? `?${queryString}` : ''}`;
 
@@ -119,13 +125,22 @@ export default function DashboardPage() {
     '/api/inventory/count-priority?limit=5',
   );
 
+  const opsParams = new URLSearchParams({ page: '1', page_size: '10' });
+  if (warehouseId) opsParams.set('warehouse_id', warehouseId);
+  if (categoryId) opsParams.set('category_id', categoryId);
+  if (operationType) opsParams.set('type', operationType);
+  if (operationStatus) opsParams.set('status', operationStatus);
+  const operations = useApi<Page<OperationSummary>>(`/api/operations?${opsParams.toString()}`);
+
   const countItems: CountPriorityItem[] = Array.isArray(countPriority.data)
     ? countPriority.data
     : Array.isArray(countPriority.data?.items)
       ? countPriority.data.items
       : [];
 
-  const hasFilters = Boolean(warehouseId || categoryId);
+  const hasFilters = Boolean(
+    warehouseId || categoryId || operationType || operationStatus,
+  );
 
   return (
     <div className="space-y-8">
@@ -170,6 +185,7 @@ export default function DashboardPage() {
             onClick={() => {
               summary.reload();
               countPriority.reload();
+              operations.reload();
             }}
             className="gap-1.5"
             title="Refresh dashboard data"
@@ -254,6 +270,43 @@ export default function DashboardPage() {
             </select>
           </div>
 
+          <div className="w-40">
+            <label htmlFor="dashboard-type" className="sr-only">
+              Filter by operation type
+            </label>
+            <select
+              id="dashboard-type"
+              value={operationType}
+              onChange={(e) => setOperationType(e.target.value)}
+              className={selectClass}
+            >
+              <option value="">All types</option>
+              <option value="receipt">Receipt</option>
+              <option value="delivery">Delivery</option>
+              <option value="transfer">Transfer</option>
+              <option value="adjustment">Adjustment</option>
+            </select>
+          </div>
+
+          <div className="w-40">
+            <label htmlFor="dashboard-status" className="sr-only">
+              Filter by operation status
+            </label>
+            <select
+              id="dashboard-status"
+              value={operationStatus}
+              onChange={(e) => setOperationStatus(e.target.value)}
+              className={selectClass}
+            >
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="waiting">Waiting</option>
+              <option value="ready">Ready</option>
+              <option value="done">Done</option>
+              <option value="canceled">Canceled</option>
+            </select>
+          </div>
+
           {hasFilters && (
             <Button
               type="button"
@@ -262,6 +315,8 @@ export default function DashboardPage() {
               onClick={() => {
                 setWarehouseId('');
                 setCategoryId('');
+                setOperationType('');
+                setOperationStatus('');
               }}
               className="text-muted-foreground hover:text-foreground"
             >
@@ -272,7 +327,7 @@ export default function DashboardPage() {
 
         {summary.data && (
           <p className="text-xs text-muted-foreground">
-            Showing filtered summary
+            {hasFilters ? 'Showing filtered summary' : 'All operations & stock'}
           </p>
         )}
       </section>
@@ -611,9 +666,15 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {summary.data.recent_operations.length === 0 ? (
+            {operations.loading && !summary.data ? (
+              <div className="p-8">
+                <DataState loading />
+              </div>
+            ) : (operations.data?.items ?? summary.data.recent_operations).length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
-                No recent operations recorded.
+                {hasFilters
+                  ? 'No recent operations match the selected filters.'
+                  : 'No recent operations recorded.'}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -629,7 +690,7 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {summary.data.recent_operations.map((op) => {
+                    {(operations.data?.items ?? summary.data.recent_operations).map((op) => {
                       const typeLabel = typeLabels[op.type] ?? op.type;
                       const statusStyle = statusBadgeStyles[op.status] ?? 'bg-secondary text-secondary-foreground';
                       const statusLabel = statusLabels[op.status] ?? op.status;
