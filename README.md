@@ -7,7 +7,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-009688)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
 
-> 🔗 **Live demo:** _coming soon_ · **API docs (live):** https://stocksense-api-vs0b.onrender.com/docs
+> 🔗 **Live app:** https://stocksense-eosin.vercel.app (demo login `manager@stocksense.dev` / `Manager@123`) · **API docs:** https://stocksense-api-vs0b.onrender.com/docs
 > _Free tier: the API sleeps after 15 min idle, so the first request can take ~50 s._
 > Built for the Odoo Hackathon (7-hour round).
 

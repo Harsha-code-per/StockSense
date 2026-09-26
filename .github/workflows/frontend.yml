@@ -3,8 +3,9 @@ on:
   push:
     branches: [main, 'feat/**']
     paths: ['frontend/**', '.github/workflows/frontend.yml']
+  # Every PR runs this check: it's required by branch protection, and a path filter
+  # would leave docs/backend-only PRs waiting forever for a check that never starts.
   pull_request:
-    paths: ['frontend/**', '.github/workflows/frontend.yml']
 permissions:
   contents: read
 jobs:
