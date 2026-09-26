@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { Boxes } from 'lucide-react';
+import { AuthBackdrop } from '@/components/auth/AuthBackdrop';
 
 export default function AuthLayout({
   children,
@@ -6,22 +8,33 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        {/* Pills keep the brand and footer readable over the login page's video backdrop. */}
-        <div className="mx-auto mb-8 flex w-fit items-center justify-center gap-3 rounded-full bg-card/90 py-1.5 pl-1.5 pr-5 text-xl font-semibold tracking-tight shadow-xs backdrop-blur">
-          <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+    <main className="relative flex min-h-dvh items-center px-4 py-10 sm:px-10 lg:px-20">
+      <AuthBackdrop />
+      <div className="w-full max-w-md lg:ml-[4%]">
+        <Link
+          href="/"
+          className="mb-8 flex w-fit items-center gap-3 rounded-md text-xl font-semibold tracking-tight text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-indigo-900/40">
             <Boxes className="size-5" aria-hidden="true" />
           </span>
           StockSense
-        </div>
-        <div className="rounded-xl border bg-card p-6 shadow-xs sm:p-8">
+        </Link>
+        <div className="rounded-2xl border border-white/20 bg-card/95 p-6 shadow-2xl shadow-black/40 ring-1 ring-black/5 backdrop-blur-xl sm:p-8">
           {children}
         </div>
-        <p className="mx-auto mt-6 w-fit rounded-full bg-card/90 px-3 py-1 text-center text-xs text-muted-foreground shadow-xs backdrop-blur">
+        <p className="mt-6 text-sm text-white/70">
           Every stock change is validated and recorded in the move history.
         </p>
       </div>
+      <p
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-10 right-12 hidden text-right text-3xl font-semibold leading-tight tracking-tight text-white/90 drop-shadow-lg xl:block"
+      >
+        Every movement.
+        <br />
+        <span className="text-indigo-300">Accounted for.</span>
+      </p>
     </main>
   );
 }
