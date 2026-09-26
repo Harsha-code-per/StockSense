@@ -20,14 +20,14 @@
 
 ## P1: after the 3:30 checkpoint is green
 - [ ] `GET /api/inventory/integrity` badge on dashboard ("Ledger reconciled ✓")
-- [ ] Ledger CSV export
+- [x] Ledger CSV export
 - [ ] Low-stock bell in header with count
 - [ ] "Late" operations (scheduled_date < today and not done) highlighted
 - [ ] Suggested reorder quantity on low-stock list → one click creates a draft receipt
 - [ ] Keyboard shortcuts / quick SKU search in header
 
 ## P2: only if everything else is solid
-- [ ] **Explainable cycle-count priority** (the only "smart" feature): rule-based score per product-location from days since last count, movements in the last 30 days, past adjustment count and magnitude, shown with its reasons ("63 days since count · 27 movements · 3 past corrections"). Evaluate against oldest-count-first and random baselines at equal budget K (Recall@K / Precision@K) before claiming improvement.
+- [x] **Explainable cycle-count priority** (backend: `GET /api/inventory/count-priority`) (the only "smart" feature): rule-based score per product-location from days since last count, movements in the last 30 days, past adjustment count and magnitude, shown with its reasons ("63 days since count · 27 movements · 3 past corrections"). Evaluate against oldest-count-first and random baselines at equal budget K (Recall@K / Precision@K) before claiming improvement.
 - [ ] QR/barcode scan of SKU and location in operation forms (browser camera)
 - [ ] Returns (reverse of a done delivery/receipt)
 
