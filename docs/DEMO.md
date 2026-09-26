@@ -9,6 +9,9 @@
 | Manager | `manager@stocksense.dev` | `Manager@123` |
 | Staff | `staff@stocksense.dev` | `Staff@123` |
 
+## Rich demo data (for the video)
+`python -m app.seed_demo --yes` wipes the database and loads two weeks of realistic activity through the real operation engine: 4 users (`manager@`, `staff@`, `priya@`, `imran@stocksense.dev`; staff password `Staff@123`), 3 warehouses / 9 locations, 20 products, ~130 validated operations, low and out-of-stock items, a board with ready / waiting / draft work, and a "Count next" list led by Office Chair (high risk: repeated miscounts + heavy movement). **Steel Rod stays at 0 kg** so the live story below still works. History is re-dated across 14 days (timestamps only); integrity stays exact.
+
 ## Seed data
 
 | Kind | Data |
