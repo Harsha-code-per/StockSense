@@ -38,6 +38,17 @@ export async function api<T = void>(
     cache: 'no-store',
     redirect: 'error',
   });
+  if (
+    response.status === 401 &&
+    typeof window !== 'undefined' &&
+    !path.startsWith('/api/auth/')
+  ) {
+    // Session expired or revoked: send the user to sign in, then back here.
+    const here = window.location.pathname + window.location.search;
+    // Full reload on purpose: api() runs outside React and stale client state should go.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+  }
   if (response.status === 204) return undefined as T;
   const body = await response.json().catch(() => null);
   if (!response.ok) {

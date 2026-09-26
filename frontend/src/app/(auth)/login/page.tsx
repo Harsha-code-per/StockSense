@@ -1,8 +1,19 @@
-import { Placeholder } from '@/components/layout/Placeholder';
-export default function Page() {
+import type { Metadata } from 'next';
+import { safeNext } from '@/lib/session';
+import { LoginForm } from './LoginForm';
+
+export const metadata: Metadata = { title: 'Sign in' };
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { next, email } = await searchParams;
   return (
-    <main className="mx-auto max-w-lg p-8 pt-20">
-      <Placeholder title="Sign in" />
-    </main>
+    <LoginForm
+      next={safeNext(next)}
+      email={typeof email === 'string' ? email : ''}
+    />
   );
 }
