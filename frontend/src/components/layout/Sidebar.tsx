@@ -1,6 +1,7 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -9,11 +10,13 @@ import {
   ClipboardCheck,
   History,
   LayoutDashboard,
+  LogOut,
   Package,
   UserRound,
   Warehouse,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 export const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/products', label: 'Products', icon: Package },
@@ -35,6 +38,23 @@ export const navigation = [
 ];
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await api('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Even if network fails, proceed with client redirection.
+    } finally {
+      onNavigate?.();
+      router.push('/login');
+      router.refresh();
+    }
+  }
+
   return (
     <div className="flex h-full flex-col bg-card px-4 py-6">
       <Link
@@ -76,6 +96,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             </Link>
           </div>
         ))}
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className={cn(
+            'flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted disabled:pointer-events-none disabled:opacity-50',
+          )}
+        >
+          <LogOut className="size-[18px]" aria-hidden="true" />
+          Logout
+        </button>
       </nav>
       <p className="mt-auto px-3 pt-10 text-xs leading-5 text-muted-foreground">
         Every movement.

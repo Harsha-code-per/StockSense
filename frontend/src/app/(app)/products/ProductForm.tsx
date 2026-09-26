@@ -1,10 +1,12 @@
 'use client';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+import { Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import type {
   Category,
@@ -79,6 +81,7 @@ export function ProductForm({ product }: { product?: Product }) {
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -121,6 +124,51 @@ export function ProductForm({ product }: { product?: Product }) {
       router.push(`/products/${saved.id}`);
     } catch (error) {
       formErrors(error, setError, fields);
+    }
+  }
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  // categories.reload() is async and the freshly created category isn't a
+  // valid <option> yet when it resolves; wait for it to actually appear in
+  // the reloaded list before selecting it, or the native <select> ignores
+  // the value. A ref (not state) holds the pending id since it's imperative
+  // bookkeeping, not something the UI needs to re-render on its own.
+  const pendingCategoryIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const pendingId = pendingCategoryIdRef.current;
+    if (pendingId && categories.data?.some((c) => String(c.id) === pendingId)) {
+      setValue('category_id', pendingId);
+      pendingCategoryIdRef.current = null;
+    }
+  }, [categories.data, setValue]);
+  async function createCategory() {
+    const name = newCategoryName.trim();
+    if (!name) {
+      setCategoryError('Enter a category name.');
+      return;
+    }
+    setCategorySubmitting(true);
+    setCategoryError(null);
+    try {
+      const created = await api<Category>('/api/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      pendingCategoryIdRef.current = String(created.id);
+      categories.reload();
+      setCreatingCategory(false);
+      setNewCategoryName('');
+      toast.success(`${created.name} added.`);
+    } catch (error) {
+      setCategoryError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to create category. Please try again.',
+      );
+    } finally {
+      setCategorySubmitting(false);
     }
   }
   if (user.loading || user.error)
@@ -176,6 +224,57 @@ export function ProductForm({ product }: { product?: Product }) {
                 </option>
               ))}
             </select>
+            {creatingCategory ? (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="New category name"
+                    value={newCategoryName}
+                    onChange={(event) => {
+                      setNewCategoryName(event.target.value);
+                      if (categoryError) setCategoryError(null);
+                    }}
+                    disabled={categorySubmitting}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={createCategory}
+                    disabled={categorySubmitting}
+                  >
+                    {categorySubmitting ? 'Creating…' : 'Create'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={categorySubmitting}
+                    onClick={() => {
+                      setCreatingCategory(false);
+                      setNewCategoryName('');
+                      setCategoryError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                {categoryError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {categoryError}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCreatingCategory(true)}
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                New category
+              </button>
+            )}
           </Field>
           <Field name="uom" label="Unit of measure" error={errors.uom?.message}>
             <select

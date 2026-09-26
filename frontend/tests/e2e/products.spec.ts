@@ -146,6 +146,70 @@ test('product editing excludes opening stock and persists active status', async 
   expect(body.initial_location_id).toBeUndefined();
   await expect(page).toHaveURL(/\/products\/12$/);
 });
+test('manager can create a category inline from the product form', async ({
+  page,
+}) => {
+  await page.goto('/products/new');
+  const newCategoryButton = page.getByRole('button', {
+    name: 'New category',
+  });
+  await expect(newCategoryButton).toBeVisible();
+  await newCategoryButton.click();
+
+  // Empty submission is rejected client-side, no request sent.
+  let requested = false;
+  await page.route('**/api/categories', (route) => {
+    if (route.request().method() === 'POST') {
+      requested = true;
+      return route.fulfill({ json: { id: 9, name: 'Fasteners' } });
+    }
+    return route.fulfill({
+      json: [{ id: 1, name: 'Raw Material' }, { id: 9, name: 'Fasteners' }],
+    });
+  });
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(page.getByText('Enter a category name.')).toBeVisible();
+  expect(requested).toBe(false);
+
+  // Successful creation posts the trimmed name and auto-selects it.
+  await page
+    .getByPlaceholder('New category name')
+    .fill('  Fasteners  ');
+  const createRequest = page.waitForRequest(
+    (req) => req.method() === 'POST' && req.url().endsWith('/api/categories'),
+  );
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  const body = (await createRequest).postDataJSON();
+  expect(body).toEqual({ name: 'Fasteners' });
+  await expect(page.getByLabel('Category')).toHaveValue('9');
+  await expect(page.getByPlaceholder('New category name')).toHaveCount(0);
+});
+
+test('backend category creation error is displayed, not swallowed', async ({
+  page,
+}) => {
+  await page.goto('/products/new');
+  await page.getByRole('button', { name: 'New category' }).click();
+  await page.getByPlaceholder('New category name').fill('Raw Material');
+  await page.route('**/api/categories', (route) =>
+    route.fulfill({
+      status: 409,
+      json: {
+        code: 'DUPLICATE',
+        message: 'A category with that name already exists.',
+        details: { field: 'name' },
+        field_errors: [],
+      },
+    }),
+  );
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(
+    page.getByText('A category with that name already exists.'),
+  ).toBeVisible();
+  // The inline creator stays open so the user can correct and retry.
+  await expect(page.getByPlaceholder('New category name')).toBeVisible();
+});
+
 test('staff can browse but cannot access product changes', async ({ page }) => {
   await page.route('**/api/auth/me', (route) =>
     route.fulfill({ json: { id: 2, name: 'Staff', role: 'staff' } }),
