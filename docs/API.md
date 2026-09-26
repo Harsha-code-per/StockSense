@@ -231,7 +231,9 @@ Creating a warehouse also creates its default location `Stock`.
 }
 ```
 
-- `lines[].available` = current balance at the source (delivery/transfer/adjustment) so the form can warn early. The server re-checks on validate anyway.
+- `lines[].available` = current balance at the source location (delivery/transfer/adjustment) or at the destination (receipt), so the form can warn early. The server re-checks on validate anyway.
+- `INSUFFICIENT_STOCK` lists **every** short line in `details.lines` (`line_id`, `product_id`, `sku`, `available`, `requested`) so the UI can highlight them all at once.
+- `PATCH` rules: omitted fields are kept; sending `lines` replaces all lines.
 - Validating an already-`done` operation returns 200 with `"already_done": true` and an empty `stock_effects`. **No second stock change** (safe for double-clicks and retries).
 
 ## Move history (ledger)

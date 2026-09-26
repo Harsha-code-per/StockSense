@@ -31,8 +31,8 @@ def list_products(
 
 
 @router.post("", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
-def create_product(data: ProductCreate, db: DbSession, _: ManagerUser):
-    return product_service.create_product(db, data)
+def create_product(data: ProductCreate, db: DbSession, user: ManagerUser):
+    return product_service.create_product(db, data, user)
 
 
 @router.get("/{product_id}", response_model=ProductDetail)

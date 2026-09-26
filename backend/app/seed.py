@@ -1,6 +1,8 @@
 """Demo data. Usage: python -m app.seed [--reset]
 
 --reset wipes ALL data first (local/dev only). Without it, seeding is skipped if users exist.
+Opening stock goes through the operation engine (validated adjustments), so it has ledger
+evidence like every other stock change.
 """
 
 import argparse
@@ -10,7 +12,9 @@ from sqlalchemy import select, text
 
 from app.database import SessionLocal
 from app.models import Base, Category, Location, Product, User, Warehouse
+from app.schemas.operation import LineIn, OperationCreate
 from app.security import hash_password
+from app.services import operation_service
 
 USERS = [
     ("Asha Manager", "manager@stocksense.dev", "Manager@123", "manager"),
@@ -33,6 +37,13 @@ PRODUCTS = [
     ("BRG001", "Bearing", "Components", "unit", "50", "500"),
     ("MTR001", "Motor", "Components", "unit", "5", "40"),
     ("ALU001", "Aluminium Sheet", "Raw Material", "kg", "30", "300"),
+]
+# Opening stock (sku, location, qty). STL001 and MTR001 start empty: Steel Rod is the live
+# demo, Motor shows "out of stock". Bearing 30 < min 50 shows "low stock".
+OPENING_STOCK = [
+    ("CHR001", "WH/Stock", "20"),
+    ("BRG001", "WH/Rack A", "30"),
+    ("ALU001", "WH/Rack B", "120"),
 ]
 
 
@@ -71,7 +82,58 @@ def seed(reset: bool = False) -> None:
             for sku, name, cat, uom, mn, mx in PRODUCTS
         )
         db.commit()
-    print("Seeded: 2 users, 2 warehouses (5 locations), 3 categories, 5 products.")
+
+        manager = db.scalar(select(User).where(User.role == "manager"))
+        loc = {l.full_name: l.id for l in db.scalars(select(Location))}  # noqa: E741
+        prod = {p.sku: p.id for p in db.scalars(select(Product))}
+
+        def post(data: OperationCreate, validate: bool = False, confirm: bool = False):
+            op = operation_service.build_operation(db, data, manager)
+            if validate:
+                operation_service.apply_stock(db, op, manager)
+            db.commit()
+            if confirm:
+                operation_service.confirm(db, op.id, manager)
+
+        for sku, location, qty in OPENING_STOCK:
+            post(
+                OperationCreate(
+                    type="adjustment",
+                    source_location_id=loc[location],
+                    notes="Opening stock",
+                    lines=[LineIn(product_id=prod[sku], counted_quantity=Decimal(qty))],
+                ),
+                validate=True,
+            )
+        # Open documents so dashboard KPIs and filters show real data.
+        post(
+            OperationCreate(
+                type="receipt",
+                destination_location_id=loc["WH/Stock"],
+                partner_name="Hindalco Industries",
+                lines=[LineIn(product_id=prod["ALU001"], quantity=Decimal("80"))],
+            ),
+            confirm=True,
+        )  # -> ready
+        post(
+            OperationCreate(
+                type="delivery",
+                source_location_id=loc["WH/Stock"],
+                partner_name="Sharma Engineering Works",
+                lines=[LineIn(product_id=prod["MTR001"], quantity=Decimal("4"))],
+            ),
+            confirm=True,
+        )  # -> waiting (no motors in stock)
+        post(
+            OperationCreate(
+                type="transfer",
+                source_location_id=loc["WH/Stock"],
+                destination_location_id=loc["WH2/Stock"],
+                lines=[LineIn(product_id=prod["CHR001"], quantity=Decimal("5"))],
+            )
+        )  # draft
+    print("Seeded: 2 users, 2 warehouses (5 locations), 3 categories, 5 products,")
+    print("        opening stock (3 adjustments) and 3 open operations (ready/waiting/draft).")
     print("Login: manager@stocksense.dev / Manager@123 · staff@stocksense.dev / Staff@123")
 
 

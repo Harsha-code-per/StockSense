@@ -29,11 +29,20 @@ class ProductCreate(ApiModel):
     min_qty: NonNegativeQty = Decimal("0")
     max_qty: NonNegativeQty = Decimal("0")
     description: Annotated[str | None, Field(max_length=2000)] = None
+    initial_quantity: NonNegativeQty = Decimal("0")
+    initial_location_id: int | None = None
 
     @field_validator("sku")
     @classmethod
     def _upper_sku(cls, v: str) -> str:
         return v.upper()
+
+    @field_validator("initial_location_id")
+    @classmethod
+    def _location_for_initial_stock(cls, v, info: ValidationInfo):
+        if v is None and (info.data.get("initial_quantity") or 0) > 0:
+            raise ValueError("Choose a location for the initial stock.")
+        return v
 
     @field_validator("max_qty")
     @classmethod
