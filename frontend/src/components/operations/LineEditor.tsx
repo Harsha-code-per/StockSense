@@ -212,7 +212,10 @@ function LineRow({
   const currentId = lines[index]?.product_id;
   const current = products.find((p) => String(p.id) === currentId);
 
-  const showAvailability = availabilityLocationId !== undefined;
+  // Only query/display availability once a location is actually chosen —
+  // never show a loading spinner for a pair that cannot be asked yet.
+  const showAvailability =
+    availabilityLocationId !== undefined && availabilityLocationId !== '';
   const availability = useAvailability(
     currentId ?? '',
     availabilityLocationId ?? '',
