@@ -15,8 +15,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // '/' is public: it shows the landing page (or redirects signed-in users).
   matcher: [
-    '/',
     '/dashboard/:path*',
     '/products/:path*',
     '/operations/:path*',
