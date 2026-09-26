@@ -7,6 +7,7 @@ import {
   ArrowUpFromLine,
   ArrowLeftRight,
   Boxes,
+  KanbanSquare,
   ClipboardCheck,
   History,
   LayoutDashboard,
@@ -20,6 +21,7 @@ import { api } from '@/lib/api';
 export const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/products', label: 'Products', icon: Package },
+  { href: '/operations/board', label: 'Board', icon: KanbanSquare },
   { href: '/operations/receipts', label: 'Receipts', icon: ArrowDownToLine },
   {
     href: '/operations/deliveries',
@@ -75,7 +77,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 Operations
               </p>
             )}
-            {index === 6 && <div className="my-5 border-t" />}
+            {index === 7 && <div className="my-5 border-t" />}
             <Link
               href={href}
               onClick={onNavigate}

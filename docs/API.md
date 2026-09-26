@@ -296,6 +296,10 @@ The dashboard's operations table reuses `GET /api/operations` with `type` / `sta
 
 `pending_*` / `scheduled_transfers` = operations of that type in `draft`, `waiting` or `ready`.
 
+| Method | Path | Access | Query | Returns |
+|---|---|---|---|---|
+| GET | `/api/dashboard/activity` | auth | `days` (1–90, default 14), `warehouse_id` | `{ days: [{ date, receipt, delivery, transfer, adjustment }], pipeline: { draft, waiting, ready } }`: validated operations per day (UTC) and open operations by stage, for the dashboard charts |
+
 `low_stock_items` lists every product below its reorder point, **out-of-stock first**, then low; each carries `suggested_order` (up to `max_qty`). The dashboard's **Reorder** button turns one into a draft receipt, and **Record count** on a Count-next item creates a draft adjustment for that product-location.
 
 ## Endpoint → owner → table map

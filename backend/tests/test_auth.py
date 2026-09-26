@@ -545,3 +545,35 @@ def test_dashboard_alerts_include_out_of_stock_first(manager):
         ("MTR001", "out", "40.000"),  # out of stock comes first, reorder up to max
         ("STL001", "low", "195.000"),
     ]
+
+
+def test_dashboard_activity_counts_validated_operations_per_day(manager):
+    from datetime import UTC, datetime
+
+    from tests.helpers import create, run, setup_world
+
+    w = setup_world(manager)
+    run(manager, "receipt", [{"product_id": w["steel"], "quantity": "10"}], dst=w["loc"]["Stock"])
+    run(manager, "receipt", [{"product_id": w["chair"], "quantity": "2"}], dst=w["loc"]["Stock"])
+    run(manager, "delivery", [{"product_id": w["steel"], "quantity": "1"}], src=w["loc"]["Stock"])
+    create(
+        manager,
+        "transfer",
+        [{"product_id": w["steel"], "quantity": "1"}],
+        src=w["loc"]["Stock"],
+        dst=w["loc"]["Rack A"],
+    )  # stays draft
+    op = create(
+        manager, "delivery", [{"product_id": w["steel"], "quantity": "999"}], src=w["loc"]["Stock"]
+    ).json()
+    manager.post(f"/api/operations/{op['id']}/confirm")  # -> waiting
+
+    r = manager.get("/api/dashboard/activity", params={"days": 7})
+    assert r.status_code == 200, r.json()
+    body = r.json()
+    assert len(body["days"]) == 7
+    today = body["days"][-1]
+    assert today["date"] == datetime.now(UTC).date().isoformat()
+    assert (today["receipt"], today["delivery"], today["transfer"]) == (2, 1, 0)
+    assert body["pipeline"] == {"draft": 1, "waiting": 1, "ready": 0}
+    assert manager.get("/api/dashboard/activity", params={"days": 0}).status_code == 422
