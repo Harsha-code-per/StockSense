@@ -30,9 +30,9 @@
 /frontend/                              @member2-github
 
 # ---------- Member 3: operations UI ----------
-/frontend/src/app/(app)/operations/     @member3-github
-/frontend/src/components/operations/    @member3-github
-/frontend/src/lib/operations.ts         @member3-github
+/frontend/src/app/(app)/operations/     @Sanjjith27
+/frontend/src/components/operations/    @Sanjjith27
+/frontend/src/lib/operations.ts         @Sanjjith27
 
 # ---------- Member 4: auth + dashboard + history (frontend slice) ----------
 /frontend/src/app/(auth)/               @member4-github
