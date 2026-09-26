@@ -5,6 +5,7 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   useFieldArray,
   useFormContext,
@@ -17,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { selectClass } from '@/components/ui/Field';
 import type { Product } from '@/lib/types';
+import { getAvailable } from '@/lib/operations';
 import type { OperationFormValues } from './OperationForm';
 
 function lineError(errors: FieldErrors<OperationFormValues>, index: number) {
@@ -27,7 +29,60 @@ function lineError(errors: FieldErrors<OperationFormValues>, index: number) {
   };
 }
 
-export function LineEditor({ products }: { products: Product[] }) {
+// Backend-reported availability for one line. Fetches only when both product
+// and source location are chosen; keyed state means a stale response for an
+// old selection is never rendered against the new one.
+function AvailabilityCell({
+  productId,
+  locationId,
+  uom,
+}: {
+  productId: string;
+  locationId: string;
+  uom: string;
+}) {
+  const key = productId && locationId ? `${productId}:${locationId}` : null;
+  const [state, setState] = useState<{
+    key: string;
+    quantity?: string;
+    failed?: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!key) return;
+    const [p, l] = key.split(':');
+    const controller = new AbortController();
+    getAvailable(Number(p), Number(l), controller.signal).then(
+      (stock) => setState({ key, quantity: stock.quantity }),
+      (error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError')
+          return;
+        setState({ key, failed: true });
+      },
+    );
+    return () => controller.abort();
+  }, [key]);
+
+  if (!key) return <span className="text-muted-foreground">—</span>;
+  if (!state || state.key !== key)
+    return <span className="text-muted-foreground">…</span>;
+  if (state.failed)
+    return <span className="text-destructive">Unavailable</span>;
+  return (
+    <span className="tabular-nums">
+      {state.quantity} {uom}
+    </span>
+  );
+}
+
+export function LineEditor({
+  products,
+  availabilityLocationId,
+}: {
+  products: Product[];
+  /** When set (deliveries): show "Available: N uom" per line from the API */
+  availabilityLocationId?: string;
+}) {
   const {
     control,
     register,
@@ -51,6 +106,11 @@ export function LineEditor({ products }: { products: Product[] }) {
               <th className="w-40 px-3 py-2 text-right font-medium">
                 Quantity
               </th>
+              {availabilityLocationId !== undefined && (
+                <th className="w-32 px-3 py-2 text-right font-medium">
+                  Available
+                </th>
+              )}
               <th className="w-14 px-3 py-2" aria-label="Remove line" />
             </tr>
           </thead>
@@ -128,6 +188,15 @@ export function LineEditor({ products }: { products: Product[] }) {
                       </p>
                     )}
                   </td>
+                  {availabilityLocationId !== undefined && (
+                    <td className="px-3 py-2 pt-4 text-right">
+                      <AvailabilityCell
+                        productId={currentId ?? ''}
+                        locationId={availabilityLocationId}
+                        uom={current?.uom ?? ''}
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-2">
                     <Button
                       type="button"

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { FormProvider, useForm } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { z } from 'zod';
@@ -46,15 +46,54 @@ const lineSchema = z.object({
   quantity,
 });
 
-const schema = z
-  .object({
-    destination_location_id: z.string().min(1, 'Choose a destination location.'),
-    partner_name: z.string().trim().max(120),
-    scheduled_date: z.string(),
-    notes: z.string().trim().max(2000),
-    lines: z.array(lineSchema).min(1, 'Add at least one line.'),
-  })
-  .superRefine((values, ctx) => {
+const baseSchema = z.object({
+  source_location_id: z.string(),
+  destination_location_id: z.string(),
+  partner_name: z.string().trim().max(120),
+  scheduled_date: z.string(),
+  notes: z.string().trim().max(2000),
+  lines: z.array(lineSchema).min(1, 'Add at least one line.'),
+});
+
+export type OperationFormValues = z.infer<typeof baseSchema>;
+
+// Per-type field configuration (docs/API.md "OperationCreate" per type)
+const TYPE_CONFIG: Record<
+  'receipt' | 'delivery',
+  {
+    locationField: 'source_location_id' | 'destination_location_id';
+    locationLabel: string;
+    locationRequired: string;
+    partnerLabel: string;
+    partnerPlaceholder: string;
+  }
+> = {
+  receipt: {
+    locationField: 'destination_location_id',
+    locationLabel: 'Destination location',
+    locationRequired: 'Choose a destination location.',
+    partnerLabel: 'Vendor',
+    partnerPlaceholder: 'e.g. Tata Steel Ltd',
+  },
+  delivery: {
+    locationField: 'source_location_id',
+    locationLabel: 'Source location',
+    locationRequired: 'Choose a source location.',
+    partnerLabel: 'Customer',
+    partnerPlaceholder: 'e.g. BuildCo',
+  },
+};
+
+function makeSchema(type: OperationType) {
+  const config = TYPE_CONFIG[type as 'receipt' | 'delivery'];
+  return baseSchema.superRefine((values, ctx) => {
+    if (!values[config.locationField]) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [config.locationField],
+        message: config.locationRequired,
+      });
+    }
     const seen = new Set<string>();
     values.lines.forEach((line, index) => {
       if (!line.product_id) return;
@@ -68,10 +107,10 @@ const schema = z
       seen.add(line.product_id);
     });
   });
-
-export type OperationFormValues = z.infer<typeof schema>;
+}
 
 const FIELDS = [
+  'source_location_id',
   'destination_location_id',
   'partner_name',
   'scheduled_date',
@@ -86,10 +125,12 @@ export function OperationForm({ type }: { type: OperationType }) {
     '/api/products?page_size=100&is_active=true',
   );
   const label = TYPE_LABELS[type];
+  const config = TYPE_CONFIG[type as 'receipt' | 'delivery'];
 
   const form = useForm<OperationFormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(makeSchema(type)),
     defaultValues: {
+      source_location_id: '',
       destination_location_id: '',
       partner_name: '',
       scheduled_date: '',
@@ -103,11 +144,20 @@ export function OperationForm({ type }: { type: OperationType }) {
     setError,
     formState: { errors, isSubmitting },
   } = form;
+  const sourceLocationId = useWatch({
+    control: form.control,
+    name: 'source_location_id',
+  });
 
   async function save(values: OperationFormValues) {
     const body: OperationCreate = {
       type,
-      destination_location_id: Number(values.destination_location_id),
+      source_location_id: values.source_location_id
+        ? Number(values.source_location_id)
+        : null,
+      destination_location_id: values.destination_location_id
+        ? Number(values.destination_location_id)
+        : null,
       partner_name: values.partner_name || null,
       scheduled_date: values.scheduled_date || null,
       notes: values.notes || null,
@@ -156,15 +206,15 @@ export function OperationForm({ type }: { type: OperationType }) {
         <fieldset disabled={isSubmitting} className="space-y-6">
           <div className="grid gap-5 sm:grid-cols-2">
             <Field
-              name="destination_location_id"
-              label="Destination location"
-              error={errors.destination_location_id?.message}
+              name={config.locationField}
+              label={config.locationLabel}
+              error={errors[config.locationField]?.message}
             >
               <select
-                {...props('destination_location_id')}
+                {...props(config.locationField)}
                 className={selectClass}
                 disabled={locations.loading}
-                {...register('destination_location_id')}
+                {...register(config.locationField)}
               >
                 <option value="">
                   {locations.loading ? 'Loading locations…' : 'Choose a location'}
@@ -178,12 +228,12 @@ export function OperationForm({ type }: { type: OperationType }) {
             </Field>
             <Field
               name="partner_name"
-              label="Vendor"
+              label={config.partnerLabel}
               error={errors.partner_name?.message}
             >
               <Input
                 {...props('partner_name')}
-                placeholder="e.g. Tata Steel Ltd"
+                placeholder={config.partnerPlaceholder}
                 autoComplete="off"
                 {...register('partner_name')}
               />
@@ -220,7 +270,12 @@ export function OperationForm({ type }: { type: OperationType }) {
                 No active products yet. Ask a manager to create products first.
               </p>
             ) : (
-              <LineEditor products={products.data?.items ?? []} />
+              <LineEditor
+                products={products.data?.items ?? []}
+                availabilityLocationId={
+                  type === 'delivery' ? sourceLocationId : undefined
+                }
+              />
             )}
           </div>
 
