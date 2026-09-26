@@ -1,0 +1,43 @@
+# One owner per path. PRs touching a path auto-request review from its owner.
+# Teammates: replace your placeholder handle in your first commit.
+# Ownership map: docs/TEAM_PLAN.md
+
+# Default: whole team via Member 1 (repo maintainer)
+*                                       @Harsha-code-per
+
+# ---------- Member 1: backend core, database, inventory engine ----------
+/backend/                               @Harsha-code-per
+/docker-compose.yml                     @Harsha-code-per
+/.github/workflows/                     @Harsha-code-per
+/docs/ARCHITECTURE.md                   @Harsha-code-per
+/docs/DATA_MODEL.md                     @Harsha-code-per
+/docs/API.md                            @Harsha-code-per
+/docs/INVENTORY_RULES.md                @Harsha-code-per
+/docs/DEPLOYMENT.md                     @Harsha-code-per
+
+# ---------- Member 4: auth + dashboard (backend slice) ----------
+/backend/app/routes/auth.py             @member4-github
+/backend/app/routes/dashboard.py        @member4-github
+/backend/app/services/auth_service.py   @member4-github
+/backend/app/services/dashboard_service.py @member4-github
+/backend/app/services/email_service.py  @member4-github
+/backend/app/schemas/auth.py            @member4-github
+/backend/app/schemas/dashboard.py       @member4-github
+/backend/tests/test_auth.py             @member4-github
+
+# ---------- Member 2: frontend shell, products, warehouses ----------
+/frontend/                              @member2-github
+
+# ---------- Member 3: operations UI ----------
+/frontend/src/app/(app)/operations/     @member3-github
+/frontend/src/components/operations/    @member3-github
+/frontend/src/lib/operations.ts         @member3-github
+
+# ---------- Member 4: auth + dashboard + history (frontend slice) ----------
+/frontend/src/app/(auth)/               @member4-github
+/frontend/src/app/(app)/dashboard/      @member4-github
+/frontend/src/app/(app)/history/        @member4-github
+/frontend/src/app/(app)/profile/        @member4-github
+/frontend/src/middleware.ts             @member4-github
+/frontend/src/proxy.ts                  @member4-github
+/docs/DEMO.md                           @member4-github
