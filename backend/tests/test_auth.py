@@ -527,3 +527,21 @@ def test_dashboard_products_in_stock_seed_like(manager):
     assert kpis["products_in_stock"] == 3
     assert kpis["low_stock"] == 1
     assert kpis["out_of_stock"] == 2
+
+
+def test_dashboard_alerts_include_out_of_stock_first(manager):
+    from tests.helpers import run, setup_world
+
+    w = setup_world(manager)  # Steel (min 20/max 200) and Chair (no reorder rule) start empty
+    run(manager, "receipt", [{"product_id": w["steel"], "quantity": "5"}], dst=w["loc"]["Stock"])
+    manager.post(
+        "/api/products",
+        json={"sku": "MTR001", "name": "Motor", "uom": "unit", "min_qty": "5", "max_qty": "40"},
+    )
+
+    items = manager.get("/api/dashboard/summary").json()["low_stock_items"]
+    assert [(i["sku"], i["stock_status"], i["suggested_order"]) for i in items] == [
+        ("CHR001", "out", "0.000"),  # out, but no reorder rule -> nothing to suggest
+        ("MTR001", "out", "40.000"),  # out of stock comes first, reorder up to max
+        ("STL001", "low", "195.000"),
+    ]

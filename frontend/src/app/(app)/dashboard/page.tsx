@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   AlertCircle,
   AlertTriangle,
@@ -10,11 +12,13 @@ import {
   ArrowRight,
   ArrowUpFromLine,
   CheckCircle2,
+  ClipboardCheck,
   ClipboardList,
   Layers,
   PackageCheck,
   PackageX,
   RefreshCw,
+  ShoppingCart,
 } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -22,7 +26,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StockBadge } from '@/components/ui/StockBadge';
 import { DataState } from '@/components/ui/DataState';
-import { selectClass } from '@/components/ui/Field';
+import { Field, selectClass } from '@/components/ui/Field';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { api } from '@/lib/api';
 import {
   Table,
   TableBody,
@@ -35,6 +49,8 @@ import { useApi } from '@/components/ui/useApi';
 import type {
   Category,
   DashboardSummary,
+  Location,
+  Operation,
   OperationStatus,
   OperationSummary,
   OperationType,
@@ -62,7 +78,8 @@ interface CountPriorityItem {
 
 const priorityLevelStyles: Record<'high' | 'medium' | 'low', string> = {
   high: 'bg-danger-soft text-danger border-destructive/20 font-semibold uppercase text-[10px] tracking-wider',
-  medium: 'bg-warning-soft text-warning border-warning/20 font-semibold uppercase text-[10px] tracking-wider',
+  medium:
+    'bg-warning-soft text-warning border-warning/20 font-semibold uppercase text-[10px] tracking-wider',
   low: 'bg-secondary text-secondary-foreground border-border font-medium uppercase text-[10px] tracking-wider',
 };
 
@@ -121,16 +138,19 @@ export default function DashboardPage() {
   const summary = useApi<DashboardSummary>(summaryPath);
   const warehouses = useApi<Warehouse[]>('/api/warehouses?is_active=true');
   const categories = useApi<Category[]>('/api/categories');
-  const countPriority = useApi<CountPriorityItem[] | { items: CountPriorityItem[] }>(
-    '/api/inventory/count-priority?limit=5',
-  );
+  const locations = useApi<Location[]>('/api/locations?is_active=true');
+  const countPriority = useApi<
+    CountPriorityItem[] | { items: CountPriorityItem[] }
+  >('/api/inventory/count-priority?limit=5');
 
   const opsParams = new URLSearchParams({ page: '1', page_size: '10' });
   if (warehouseId) opsParams.set('warehouse_id', warehouseId);
   if (categoryId) opsParams.set('category_id', categoryId);
   if (operationType) opsParams.set('type', operationType);
   if (operationStatus) opsParams.set('status', operationStatus);
-  const operations = useApi<Page<OperationSummary>>(`/api/operations?${opsParams.toString()}`);
+  const operations = useApi<Page<OperationSummary>>(
+    `/api/operations?${opsParams.toString()}`,
+  );
 
   const countItems: CountPriorityItem[] = Array.isArray(countPriority.data)
     ? countPriority.data
@@ -203,17 +223,26 @@ export default function DashboardPage() {
           className="flex flex-col gap-3 rounded-xl border border-destructive/40 bg-danger-soft p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle className="size-5 shrink-0 text-destructive" aria-hidden="true" />
+            <AlertCircle
+              className="size-5 shrink-0 text-destructive"
+              aria-hidden="true"
+            />
             <div>
               <p className="font-semibold text-destructive">
                 Ledger reconciliation issue detected
               </p>
               <p className="text-xs text-destructive/90 sm:text-sm">
-                The cumulative sum of ledger transactions does not match one or more product balances.
+                The cumulative sum of ledger transactions does not match one or
+                more product balances.
               </p>
             </div>
           </div>
-          <Button asChild size="sm" variant="destructive" className="shrink-0 self-start sm:self-auto">
+          <Button
+            asChild
+            size="sm"
+            variant="destructive"
+            className="shrink-0 self-start sm:self-auto"
+          >
             <Link href="/history">Inspect Ledger</Link>
           </Button>
         </div>
@@ -226,8 +255,13 @@ export default function DashboardPage() {
       >
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <Layers className="size-4 text-muted-foreground" aria-hidden="true" />
-            <span className="text-sm font-medium text-foreground">Filters:</span>
+            <Layers
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium text-foreground">
+              Filters:
+            </span>
           </div>
 
           <div className="w-48">
@@ -348,7 +382,9 @@ export default function DashboardPage() {
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">In Stock</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    In Stock
+                  </span>
                   <span className="flex size-8 items-center justify-center rounded-lg bg-success-soft text-success transition-transform group-hover:scale-110">
                     <PackageCheck className="size-4" aria-hidden="true" />
                   </span>
@@ -357,7 +393,9 @@ export default function DashboardPage() {
                   <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {summary.data.kpis.products_in_stock}
                   </span>
-                  <p className="text-xs text-muted-foreground">Healthy stock lines</p>
+                  <p className="text-xs text-muted-foreground">
+                    Healthy stock lines
+                  </p>
                 </div>
               </Link>
 
@@ -367,7 +405,9 @@ export default function DashboardPage() {
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-warning/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Low Stock</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Low Stock
+                  </span>
                   <span className="flex size-8 items-center justify-center rounded-lg bg-warning-soft text-warning transition-transform group-hover:scale-110">
                     <AlertTriangle className="size-4" aria-hidden="true" />
                   </span>
@@ -376,7 +416,9 @@ export default function DashboardPage() {
                   <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {summary.data.kpis.low_stock}
                   </span>
-                  <p className="text-xs text-muted-foreground">Below reorder point</p>
+                  <p className="text-xs text-muted-foreground">
+                    Below reorder point
+                  </p>
                 </div>
               </Link>
 
@@ -386,7 +428,9 @@ export default function DashboardPage() {
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-danger/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Out of Stock</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Out of Stock
+                  </span>
                   <span className="flex size-8 items-center justify-center rounded-lg bg-danger-soft text-danger transition-transform group-hover:scale-110">
                     <PackageX className="size-4" aria-hidden="true" />
                   </span>
@@ -405,7 +449,9 @@ export default function DashboardPage() {
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Pending Receipts</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Pending Receipts
+                  </span>
                   <span className="flex size-8 items-center justify-center rounded-lg bg-info-soft text-info transition-transform group-hover:scale-110">
                     <ArrowDownToLine className="size-4" aria-hidden="true" />
                   </span>
@@ -414,7 +460,9 @@ export default function DashboardPage() {
                   <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {summary.data.kpis.pending_receipts}
                   </span>
-                  <p className="text-xs text-muted-foreground">Incoming shipments</p>
+                  <p className="text-xs text-muted-foreground">
+                    Incoming shipments
+                  </p>
                 </div>
               </Link>
 
@@ -424,7 +472,9 @@ export default function DashboardPage() {
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Pending Deliveries</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Pending Deliveries
+                  </span>
                   <span className="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-transform group-hover:scale-110">
                     <ArrowUpFromLine className="size-4" aria-hidden="true" />
                   </span>
@@ -433,7 +483,9 @@ export default function DashboardPage() {
                   <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {summary.data.kpis.pending_deliveries}
                   </span>
-                  <p className="text-xs text-muted-foreground">Outgoing dispatches</p>
+                  <p className="text-xs text-muted-foreground">
+                    Outgoing dispatches
+                  </p>
                 </div>
               </Link>
 
@@ -443,7 +495,9 @@ export default function DashboardPage() {
                 className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Transfers</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Transfers
+                  </span>
                   <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground transition-transform group-hover:scale-110">
                     <ArrowLeftRight className="size-4" aria-hidden="true" />
                   </span>
@@ -452,7 +506,9 @@ export default function DashboardPage() {
                   <span className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     {summary.data.kpis.scheduled_transfers}
                   </span>
-                  <p className="text-xs text-muted-foreground">Internal movements</p>
+                  <p className="text-xs text-muted-foreground">
+                    Internal movements
+                  </p>
                 </div>
               </Link>
             </div>
@@ -484,7 +540,8 @@ export default function DashboardPage() {
 
               {summary.data.low_stock_items.length === 0 ? (
                 <div className="p-8 text-center text-sm text-muted-foreground">
-                  All products are currently stocked at safe levels. No low-stock alerts.
+                  All products are currently stocked at safe levels. No
+                  low-stock alerts.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -495,7 +552,9 @@ export default function DashboardPage() {
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">On Hand</TableHead>
                         <TableHead className="text-right">Min Qty</TableHead>
-                        <TableHead className="text-right">Suggested Order</TableHead>
+                        <TableHead className="text-right">
+                          Suggested Order
+                        </TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -518,20 +577,42 @@ export default function DashboardPage() {
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm">
                             {item.on_hand}{' '}
-                            <span className="text-xs text-muted-foreground">{item.uom}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.uom}
+                            </span>
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm">
                             {item.min_qty}{' '}
-                            <span className="text-xs text-muted-foreground">{item.uom}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.uom}
+                            </span>
                           </TableCell>
                           <TableCell className="text-right font-mono text-sm font-semibold text-primary">
                             {item.suggested_order}{' '}
-                            <span className="text-xs text-muted-foreground">{item.uom}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.uom}
+                            </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button asChild variant="ghost" size="xs">
-                              <Link href={`/products/${item.product_id}`}>Details</Link>
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <ReorderButton
+                                productId={item.product_id}
+                                name={item.name}
+                                uom={item.uom}
+                                quantity={item.suggested_order}
+                                onHand={item.on_hand}
+                                minQty={item.min_qty}
+                                destination={reorderDestination(
+                                  locations.data,
+                                  warehouseId,
+                                )}
+                              />
+                              <Button asChild variant="ghost" size="xs">
+                                <Link href={`/products/${item.product_id}`}>
+                                  Details
+                                </Link>
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -567,21 +648,33 @@ export default function DashboardPage() {
                   {countPriority.loading ? (
                     <div className="space-y-3">
                       {[1, 2, 3].map((idx) => (
-                        <div key={idx} className="h-12 w-full animate-pulse rounded-md bg-muted" />
+                        <div
+                          key={idx}
+                          className="h-12 w-full animate-pulse rounded-md bg-muted"
+                        />
                       ))}
                     </div>
                   ) : countItems.length > 0 ? (
                     <ul className="divide-y text-sm">
                       {countItems.map((item, index) => {
-                        const displayName = item.product_name ?? item.sku ?? `Item ${index + 1}`;
+                        const displayName =
+                          item.product_name ?? item.sku ?? `Item ${index + 1}`;
                         const location = item.location_name ?? 'Stock';
-                        const onHand = item.quantity !== undefined ? String(item.quantity) : null;
+                        const onHand =
+                          item.quantity !== undefined
+                            ? String(item.quantity)
+                            : null;
                         const uom = item.uom ?? '';
                         const level = item.level ?? 'low';
-                        const reasonsList = Array.isArray(item.reasons) ? item.reasons : [];
+                        const reasonsList = Array.isArray(item.reasons)
+                          ? item.reasons
+                          : [];
 
                         return (
-                          <li key={item.product_id ?? index} className="py-3.5 first:pt-0 last:pb-0">
+                          <li
+                            key={`${item.product_id}-${item.location_id}`}
+                            className="py-3.5 first:pt-0 last:pb-0"
+                          >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
@@ -592,7 +685,9 @@ export default function DashboardPage() {
                                     {displayName}
                                   </Link>
                                   {item.level && (
-                                    <Badge className={priorityLevelStyles[level]}>
+                                    <Badge
+                                      className={priorityLevelStyles[level]}
+                                    >
                                       {level}
                                     </Badge>
                                   )}
@@ -607,7 +702,9 @@ export default function DashboardPage() {
                                   <span className="font-mono text-xs font-semibold text-foreground">
                                     {onHand} {uom}
                                   </span>
-                                  <span className="block text-[10px] text-muted-foreground">on hand</span>
+                                  <span className="block text-[10px] text-muted-foreground">
+                                    on hand
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -624,13 +721,23 @@ export default function DashboardPage() {
                                 ))}
                               </div>
                             )}
+                            <RecordCountButton
+                              productId={item.product_id}
+                              name={displayName}
+                              locationId={item.location_id}
+                              locationName={location}
+                              uom={uom}
+                              systemQuantity={onHand}
+                            />
                           </li>
                         );
                       })}
                     </ul>
                   ) : (
                     <div className="py-6 text-center text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">Physical count up to date</p>
+                      <p className="font-medium text-foreground">
+                        Physical count up to date
+                      </p>
                       <p className="mt-1 text-xs">
                         No critical items pending cycle verification right now.
                       </p>
@@ -640,7 +747,12 @@ export default function DashboardPage() {
               </div>
 
               <div className="border-t bg-muted/30 p-4">
-                <Button asChild variant="outline" size="sm" className="w-full gap-1.5">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5"
+                >
                   <Link href="/operations/adjustments">
                     <span>Manage Stock Counts</span>
                     <ArrowRight className="size-3.5" aria-hidden="true" />
@@ -661,16 +773,18 @@ export default function DashboardPage() {
                   Recent Operations
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Latest stock movements across receipts, deliveries, transfers, and adjustments
+                  Latest stock movements across receipts, deliveries, transfers,
+                  and adjustments
                 </p>
               </div>
             </div>
 
-            {operations.loading && !summary.data ? (
+            {operations.loading ? (
               <div className="p-8">
                 <DataState loading />
               </div>
-            ) : (operations.data?.items ?? summary.data.recent_operations).length === 0 ? (
+            ) : (operations.data?.items ?? summary.data.recent_operations)
+                .length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
                 {hasFilters
                   ? 'No recent operations match the selected filters.'
@@ -690,15 +804,22 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(operations.data?.items ?? summary.data.recent_operations).map((op) => {
+                    {(
+                      operations.data?.items ?? summary.data.recent_operations
+                    ).map((op) => {
                       const typeLabel = typeLabels[op.type] ?? op.type;
-                      const statusStyle = statusBadgeStyles[op.status] ?? 'bg-secondary text-secondary-foreground';
+                      const statusStyle =
+                        statusBadgeStyles[op.status] ??
+                        'bg-secondary text-secondary-foreground';
                       const statusLabel = statusLabels[op.status] ?? op.status;
 
                       let routeOrPartner = '—';
                       if (op.partner_name) {
                         routeOrPartner = op.partner_name;
-                      } else if (op.source_location && op.destination_location) {
+                      } else if (
+                        op.source_location &&
+                        op.destination_location
+                      ) {
                         routeOrPartner = `${op.source_location.full_name} → ${op.destination_location.full_name}`;
                       } else if (op.destination_location) {
                         routeOrPartner = `To ${op.destination_location.full_name}`;
@@ -709,10 +830,14 @@ export default function DashboardPage() {
                       return (
                         <TableRow key={op.id}>
                           <TableCell className="font-mono text-sm font-medium">
-                            <span className="text-foreground">{op.reference}</span>
+                            <span className="text-foreground">
+                              {op.reference}
+                            </span>
                           </TableCell>
                           <TableCell>
-                            <span className="font-medium text-foreground">{typeLabel}</span>
+                            <span className="font-medium text-foreground">
+                              {typeLabel}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <Badge className={statusStyle}>{statusLabel}</Badge>
@@ -737,5 +862,231 @@ export default function DashboardPage() {
         </>
       ) : null}
     </div>
+  );
+}
+
+/** Where a reorder is received: the filtered warehouse's "Stock" location, else the first "Stock". */
+function reorderDestination(
+  locations: Location[] | undefined,
+  warehouseId: string,
+): Location | undefined {
+  const inScope = (locations ?? []).filter(
+    (l) => !warehouseId || String(l.warehouse_id) === warehouseId,
+  );
+  return inScope.find((l) => l.name === 'Stock') ?? inScope[0];
+}
+
+/** Low stock -> one click creates a draft receipt for the suggested quantity (stock only
+ *  changes when it is validated, as for any receipt). */
+function ReorderButton({
+  productId,
+  name,
+  uom,
+  quantity,
+  onHand,
+  minQty,
+  destination,
+}: {
+  productId: number;
+  name: string;
+  uom: string;
+  quantity: string;
+  onHand: string;
+  minQty: string;
+  destination?: Location;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  if (Number(quantity) <= 0) return null;
+  async function reorder() {
+    if (!destination) {
+      toast.error(
+        'No active location to receive into. Add one under Warehouses.',
+      );
+      return;
+    }
+    setPending(true);
+    try {
+      const op = await api<Operation>('/api/operations', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'receipt',
+          destination_location_id: destination.id,
+          notes: `Reorder: ${onHand} ${uom} on hand, below the minimum of ${minQty} ${uom}.`,
+          lines: [{ product_id: productId, quantity }],
+        }),
+      });
+      toast.success(
+        `Draft receipt ${op.reference} for ${quantity} ${uom} of ${name} into ${destination.full_name}. Review and validate when the goods arrive.`,
+      );
+      router.push(`/operations/receipts/${op.id}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not create the receipt.',
+      );
+      setPending(false);
+    }
+  }
+  return (
+    <Button
+      size="xs"
+      variant="outline"
+      onClick={reorder}
+      disabled={pending}
+      aria-label={`Reorder ${quantity} ${uom} of ${name}`}
+      className="gap-1"
+    >
+      <ShoppingCart className="size-3.5" aria-hidden="true" />
+      {pending ? 'Creating…' : 'Reorder'}
+    </Button>
+  );
+}
+
+const COUNT_PATTERN = /^\d{1,15}(\.\d{1,3})?$/;
+
+/** Count-next item -> record the physical count as a draft adjustment for that exact
+ *  product-location; a manager validates it (the difference is applied then). */
+function RecordCountButton({
+  productId,
+  name,
+  locationId,
+  locationName,
+  uom,
+  systemQuantity,
+}: {
+  productId: number;
+  name: string;
+  locationId: number;
+  locationName: string;
+  uom: string;
+  systemQuantity: string | null;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [counted, setCounted] = useState('');
+  const [error, setError] = useState<string>();
+  const [pending, setPending] = useState(false);
+  const value = counted.trim();
+  const difference =
+    COUNT_PATTERN.test(value) && systemQuantity !== null
+      ? Number(value) - Number(systemQuantity) // display-only preview; the server computes the real delta
+      : null;
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!COUNT_PATTERN.test(value)) {
+      setError('Enter a count of 0 or more, with up to 3 decimal places.');
+      return;
+    }
+    setPending(true);
+    try {
+      const op = await api<Operation>('/api/operations', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'adjustment',
+          source_location_id: locationId,
+          notes: 'Cycle count from the Count next list.',
+          lines: [{ product_id: productId, counted_quantity: value }],
+        }),
+      });
+      toast.success(
+        `Count recorded as ${op.reference}. A manager validates it to update stock.`,
+      );
+      router.push(`/operations/adjustments/${op.id}`);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not record the count.',
+      );
+      setPending(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        size="xs"
+        variant="outline"
+        className="mt-2.5 gap-1"
+        onClick={() => {
+          setCounted('');
+          setError(undefined);
+          setOpen(true);
+        }}
+      >
+        <ClipboardCheck className="size-3.5" aria-hidden="true" />
+        Record count
+      </Button>
+      <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+        <DialogContent className="bg-card sm:max-w-md">
+          <form onSubmit={submit} noValidate className="space-y-5">
+            <DialogHeader>
+              <DialogTitle>Record count</DialogTitle>
+              <DialogDescription>
+                {name} at {locationName}
+                {systemQuantity !== null
+                  ? ` · system says ${systemQuantity} ${uom}`
+                  : ''}
+              </DialogDescription>
+            </DialogHeader>
+            <Field
+              name="counted_quantity"
+              label={`Counted quantity (${uom})`}
+              error={error}
+            >
+              <Input
+                id="counted_quantity"
+                inputMode="decimal"
+                autoFocus
+                value={counted}
+                onChange={(e) => {
+                  setCounted(e.target.value);
+                  setError(undefined);
+                }}
+                aria-invalid={!!error}
+                aria-describedby={
+                  error ? 'counted_quantity-error' : 'count-difference'
+                }
+              />
+            </Field>
+            {difference !== null && (
+              <p
+                id="count-difference"
+                className="text-sm text-muted-foreground"
+                aria-live="polite"
+              >
+                Difference:{' '}
+                <span
+                  className={
+                    difference < 0
+                      ? 'font-mono font-semibold text-destructive'
+                      : difference > 0
+                        ? 'font-mono font-semibold text-success'
+                        : 'font-mono font-semibold'
+                  }
+                >
+                  {difference > 0 ? '+' : ''}
+                  {difference.toFixed(3)} {uom}
+                </span>
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={pending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? 'Saving…' : 'Save count'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

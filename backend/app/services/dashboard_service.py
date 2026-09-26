@@ -62,6 +62,10 @@ def get_dashboard_summary(
             in_stock_count += 1
         if status == "low":
             low_stock_count += 1
+        elif status == "out":
+            out_of_stock_count += 1
+        # Alert on everything below its reorder point, including items that ran out.
+        if status in ("low", "out"):
             low_stock_items.append(
                 LowStockItem(
                     product_id=prod.id,
@@ -74,8 +78,8 @@ def get_dashboard_summary(
                     stock_status=status,
                 )
             )
-        elif status == "out":
-            out_of_stock_count += 1
+    # Most urgent first: out of stock, then low; alphabetical within each group.
+    low_stock_items.sort(key=lambda item: (item.stock_status != "out", item.name.lower()))
 
     # 3. Recent operations (first page of 10 items)
     recent_ops_page = operation_service.list_operations(
