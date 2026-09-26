@@ -296,6 +296,8 @@ The dashboard's operations table reuses `GET /api/operations` with `type` / `sta
 
 `pending_*` / `scheduled_transfers` = operations of that type in `draft`, `waiting` or `ready`.
 
+`low_stock_items` lists every product below its reorder point, **out-of-stock first**, then low; each carries `suggested_order` (up to `max_qty`). The dashboard's **Reorder** button turns one into a draft receipt, and **Record count** on a Count-next item creates a draft adjustment for that product-location.
+
 ## Endpoint → owner → table map
 
 | Endpoint group | Backend owner | Frontend owner | Main tables |
