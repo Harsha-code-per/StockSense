@@ -78,7 +78,7 @@ docker compose up -d db                      # PostgreSQL 16
 
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 cp .env.example .env
 alembic upgrade head && python -m app.seed
 uvicorn app.main:app --reload                # http://localhost:8000/docs
@@ -121,7 +121,7 @@ StockSense/
 |---|---|---|
 | Member 1 | Backend, database & inventory engine | [@Harsha-code-per](https://github.com/Harsha-code-per) |
 | Member 2 | Frontend shell, products & warehouses, deployment | @member2-github |
-| Member 3 | Operations UI (receipts, deliveries, transfers, adjustments) | @member3-github |
+| Member 3 | Operations UI (receipts, deliveries, transfers, adjustments) | [@Sanjjith27](https://github.com/Sanjjith27) |
 | Member 4 | Auth, dashboard, move history, QA & demo | @member4-github |
 
 ## License
