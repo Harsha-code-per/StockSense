@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/PageHeader';
+import { KpiTiltCard } from '@/components/motion/KpiTiltCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StockBadge } from '@/components/ui/StockBadge';
@@ -343,9 +344,9 @@ export default function DashboardPage() {
           <section aria-label="Inventory KPIs">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {/* Products in stock */}
-              <Link
+              <KpiTiltCard
                 href="/products?stock_status=in_stock"
-                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
+                className="hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">In Stock</span>
@@ -359,12 +360,12 @@ export default function DashboardPage() {
                   </span>
                   <p className="text-xs text-muted-foreground">Healthy stock lines</p>
                 </div>
-              </Link>
+              </KpiTiltCard>
 
               {/* Low stock */}
-              <Link
+              <KpiTiltCard
                 href="/products?stock_status=low"
-                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-warning/40 hover:shadow-md"
+                className="hover:border-warning/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Low Stock</span>
@@ -378,12 +379,12 @@ export default function DashboardPage() {
                   </span>
                   <p className="text-xs text-muted-foreground">Below reorder point</p>
                 </div>
-              </Link>
+              </KpiTiltCard>
 
               {/* Out of stock */}
-              <Link
+              <KpiTiltCard
                 href="/products?stock_status=out"
-                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-danger/40 hover:shadow-md"
+                className="hover:border-danger/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Out of Stock</span>
@@ -397,12 +398,12 @@ export default function DashboardPage() {
                   </span>
                   <p className="text-xs text-muted-foreground">Zero balance</p>
                 </div>
-              </Link>
+              </KpiTiltCard>
 
               {/* Pending receipts */}
-              <Link
+              <KpiTiltCard
                 href="/operations/receipts"
-                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
+                className="hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Pending Receipts</span>
@@ -416,12 +417,12 @@ export default function DashboardPage() {
                   </span>
                   <p className="text-xs text-muted-foreground">Incoming shipments</p>
                 </div>
-              </Link>
+              </KpiTiltCard>
 
               {/* Pending deliveries */}
-              <Link
+              <KpiTiltCard
                 href="/operations/deliveries"
-                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
+                className="hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Pending Deliveries</span>
@@ -435,12 +436,12 @@ export default function DashboardPage() {
                   </span>
                   <p className="text-xs text-muted-foreground">Outgoing dispatches</p>
                 </div>
-              </Link>
+              </KpiTiltCard>
 
               {/* Scheduled transfers */}
-              <Link
+              <KpiTiltCard
                 href="/operations/transfers"
-                className="group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md"
+                className="hover:border-primary/40 hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-muted-foreground">Transfers</span>
@@ -454,7 +455,7 @@ export default function DashboardPage() {
                   </span>
                   <p className="text-xs text-muted-foreground">Internal movements</p>
                 </div>
-              </Link>
+              </KpiTiltCard>
             </div>
           </section>
 
