@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Pencil, MapPin } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ export default function WarehousesPage() {
   const [selected, setSelected] = useState<Warehouse>();
   const [editor, setEditor] = useState<Editor>();
   const [pending, setPending] = useState(false);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const warehouses = useApi<Warehouse[]>(
     `/api/warehouses${active ? `?is_active=${active}` : ''}`,
   );
@@ -64,7 +65,12 @@ export default function WarehousesPage() {
         description="Organize where inventory lives, from warehouses to individual locations."
       >
         {manager && (
-          <Button onClick={() => setEditor({ type: 'warehouse' })}>
+          <Button
+            onClick={(event) => {
+              triggerRef.current = event.currentTarget;
+              setEditor({ type: 'warehouse' });
+            }}
+          >
             <Plus aria-hidden="true" />
             New warehouse
           </Button>
@@ -169,9 +175,10 @@ export default function WarehousesPage() {
                           variant="ghost"
                           size="icon"
                           aria-label={`Edit ${warehouse.name}`}
-                          onClick={() =>
-                            setEditor({ type: 'warehouse', warehouse })
-                          }
+                          onClick={(event) => {
+                            triggerRef.current = event.currentTarget;
+                            setEditor({ type: 'warehouse', warehouse });
+                          }}
                         >
                           <Pencil aria-hidden="true" />
                         </Button>
@@ -214,9 +221,10 @@ export default function WarehousesPage() {
             ) ?? selected
           }
           manager={manager}
-          onEdit={(location) =>
-            setEditor({ type: 'location', warehouse: selected, location })
-          }
+          onEdit={(location, trigger) => {
+            triggerRef.current = trigger ?? null;
+            setEditor({ type: 'location', warehouse: selected, location });
+          }}
         />
       )}
       <Dialog
@@ -229,6 +237,12 @@ export default function WarehousesPage() {
           showCloseButton={!pending}
           className="max-h-[90dvh] overflow-y-auto bg-card"
           onInteractOutside={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => {
+            if (triggerRef.current) {
+              event.preventDefault();
+              triggerRef.current.focus();
+            }
+          }}
         >
           <DialogHeader>
             <DialogTitle>
@@ -274,7 +288,7 @@ function Locations({
 }: {
   warehouse: Warehouse;
   manager: boolean;
-  onEdit: (location?: Location) => void;
+  onEdit: (location?: Location, trigger?: HTMLElement) => void;
 }) {
   const [search, setSearch] = useState('');
   const [active, setActive] = useState('true');
@@ -299,7 +313,10 @@ function Locations({
           </p>
         </div>
         {manager && warehouse.is_active && (
-          <Button variant="outline" onClick={() => onEdit()}>
+          <Button
+            variant="outline"
+            onClick={(event) => onEdit(undefined, event.currentTarget)}
+          >
             <Plus aria-hidden="true" />
             New location
           </Button>
@@ -373,7 +390,7 @@ function Locations({
                     <Button
                       variant="ghost"
                       aria-label={`Edit ${location.full_name}`}
-                      onClick={() => onEdit(location)}
+                      onClick={(event) => onEdit(location, event.currentTarget)}
                     >
                       <Pencil aria-hidden="true" />
                       Edit
