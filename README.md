@@ -36,9 +36,20 @@ So at any moment the app can answer: *What do we have? Where is it? What is comi
 | 📜 **Move history** | Append-only stock ledger: who, when, what, from where to where, balance after |
 | 🏭 **Multi-warehouse** | Warehouses with locations (racks, floors, zones) |
 | 🔎 **Search & alerts** | SKU/name search, smart filters, low-stock badges |
-| ✅ **Integrity check** | Proves ledger totals equal current balances for every product-location |
+| ✅ **Integrity check** | Proves ledger totals equal current balances for every product-location ("Ledger reconciled ✓" on the dashboard) |
+| 🎯 **Count next** | Ranks which product-locations to physically count first, with plain-language reasons (movements since last count, days since last count, past discrepancies). A transparent rule score, no black box |
+| 📄 **CSV export** | Download the move history with the current filters |
 
 Odoo-style references (`WH/IN/0001`, `WH/OUT/0001`, `WH/INT/0001`, `WH/ADJ/0001`) and statuses (Draft → Waiting / Ready → Done, or Canceled).
+
+## Screenshots
+| Dashboard | Move history (the full audit trail) |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Move history](docs/screenshots/move-history.png) |
+| **Physical count: difference shown before posting** | **Products with stock status and reorder suggestion** |
+| ![Adjustment](docs/screenshots/adjustment.png) | ![Products](docs/screenshots/products.png) |
+
+The move history above is the demo story from [docs/DEMO.md](docs/DEMO.md): receive 100 kg of steel, move 40 to the production floor, deliver 20, count 17 (−3), leaving **77 kg**, and every step explains itself.
 
 ## Why it's trustworthy
 - **Atomic operations:** one database transaction per validation. A transfer can never decrease the source without increasing the destination.
@@ -46,6 +57,12 @@ Odoo-style references (`WH/IN/0001`, `WH/OUT/0001`, `WH/INT/0001`, `WH/ADJ/0001`
 - **Idempotent:** double-clicking *Validate* never moves stock twice.
 - **Enforced by the database:** `CHECK (quantity >= 0)`, shape constraints per operation type, and a trigger that makes the ledger append-only.
 - **Validated twice:** instant form feedback (zod) plus server validation (Pydantic) with field-level messages.
+
+## How we know it works
+- **73 backend tests** on real PostgreSQL: the full demo story, every rule in the acceptance matrix, two users racing for the last units (exactly one wins), multi-line transfers that roll back completely, a ledger that rejects edits, and the auth lockout under parallel attempts.
+- **54 browser tests** (desktop, tablet, mobile) for the frontend, plus unit tests for the API client and the login redirect guard.
+- **CI on every pull request** (lint, tests, migrations up/down/up, production build, browser tests); `main` is protected and only accepts green PRs. Every merge auto-deploys.
+- The live site was walked through end to end in a real browser after deployment.
 
 ## Tech stack
 | Layer | Technology |
