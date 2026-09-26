@@ -76,9 +76,11 @@ export function cancelOperation(id: number): Promise<Operation> {
 export function getAvailable(
   productId: number,
   locationId: number,
+  signal?: AbortSignal,
 ): Promise<AvailableStock> {
   return api(
     `/api/inventory/available?product_id=${productId}&location_id=${locationId}`,
+    { signal },
   );
 }
 
