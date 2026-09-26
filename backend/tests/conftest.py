@@ -74,3 +74,35 @@ def client():
 
     with TestClient(app) as c:
         yield c
+
+
+def _client_for(role: str):
+    from fastapi.testclient import TestClient
+
+    from app.database import SessionLocal
+    from app.main import app
+    from app.models import User
+    from app.security import SESSION_COOKIE, create_access_token
+
+    with SessionLocal() as session:
+        user = User(email=f"{role}@test.dev", name=role.title(), password_hash="x", role=role)
+        session.add(user)
+        session.commit()
+        user_id = user.id
+    c = TestClient(app)
+    c.cookies.set(SESSION_COOKIE, create_access_token(user_id))
+    c.user_id = user_id
+    return c
+
+
+@pytest.fixture
+def manager():
+    """HTTP client logged in as a manager (real session cookie)."""
+    with _client_for("manager") as c:
+        yield c
+
+
+@pytest.fixture
+def staff():
+    with _client_for("staff") as c:
+        yield c

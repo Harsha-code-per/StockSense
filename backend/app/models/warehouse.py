@@ -17,6 +17,10 @@ class Warehouse(IdMixin, TimestampMixin, Base):
         back_populates="warehouse", order_by="Location.id"
     )
 
+    @property
+    def location_count(self) -> int:
+        return len(self.locations)
+
 
 class Location(IdMixin, TimestampMixin, Base):
     """A place stock can sit: rack, bin, zone, production floor... inside a warehouse."""
@@ -31,6 +35,10 @@ class Location(IdMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(server_default=text("true"))
 
     warehouse: Mapped[Warehouse] = relationship(back_populates="locations", lazy="joined")
+
+    @property
+    def warehouse_code(self) -> str:
+        return self.warehouse.code
 
     @property
     def full_name(self) -> str:
