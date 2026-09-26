@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/api.test.ts",
+    "test": "node --experimental-strip-types --test tests/api.test.ts tests/session.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
