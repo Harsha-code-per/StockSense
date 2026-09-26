@@ -9,7 +9,7 @@
 /backend/                               @Harsha-code-per
 /docker-compose.yml                     @Harsha-code-per
 /.github/workflows/                     @Harsha-code-per
-/.github/workflows/frontend.yml         @member2-github
+/.github/workflows/frontend.yml         @loktrishal-05
 /docs/ARCHITECTURE.md                   @Harsha-code-per
 /docs/DATA_MODEL.md                     @Harsha-code-per
 /docs/API.md                            @Harsha-code-per
@@ -27,7 +27,7 @@
 /backend/tests/test_auth.py             @Cholan-kinnera
 
 # ---------- Member 2: frontend shell, products, warehouses ----------
-/frontend/                              @member2-github
+/frontend/                              @loktrishal-05
 
 # ---------- Member 3: operations UI ----------
 /frontend/src/app/(app)/operations/     @Sanjjith27

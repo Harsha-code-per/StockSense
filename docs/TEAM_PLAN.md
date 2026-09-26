@@ -8,7 +8,7 @@
 | Member | Role | One-line mission |
 |---|---|---|
 | **Member 1**: @Harsha-code-per | Backend core + Database + Inventory engine | Stock is always correct and explainable |
-| **Member 2**: @member2-github | Frontend shell + Products + Warehouses + deploy (frontend) | The app looks like one consistent product |
+| **Member 2**: [@loktrishal-05](https://github.com/loktrishal-05) | Frontend shell + Products + Warehouses + deploy (frontend) | The app looks like one consistent product |
 | **Member 3**: [@Sanjjith27](https://github.com/Sanjjith27) | Operations UI (Receipts, Deliveries, Transfers, Adjustments) | Warehouse tasks are fast and hard to get wrong |
 | **Member 4**: [@Cholan-kinnera](https://github.com/Cholan-kinnera) | Auth + Dashboard + Move History + QA/Demo | Secure entry, clear overview, and it all works end to end |
 
