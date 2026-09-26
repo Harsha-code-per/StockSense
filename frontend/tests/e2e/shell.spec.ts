@@ -55,3 +55,38 @@ test('shell navigation, keyboard focus, and reduced motion', async ({
     ),
   ).toBeTruthy();
 });
+
+test('Logout is visible directly beneath Profile', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/dashboard');
+  if (testInfo.project.name !== 'desktop') {
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+  }
+  const nav = page.getByRole('navigation', { name: 'Main navigation' }).last();
+  const labels = await nav.locator('a, button').allInnerTexts();
+  const profileIndex = labels.indexOf('Profile');
+  expect(profileIndex).toBeGreaterThan(-1);
+  expect(labels[profileIndex + 1]).toBe('Logout');
+});
+
+test('Logout posts to /api/auth/logout and redirects to /login', async ({
+  page,
+}, testInfo) => {
+  let loggedOut = false;
+  await page.route('**/api/auth/logout', (route) => {
+    loggedOut = true;
+    return route.fulfill({ json: {} });
+  });
+  await page.goto('/dashboard');
+  if (testInfo.project.name !== 'desktop') {
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+  }
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .last()
+    .getByRole('button', { name: 'Logout' })
+    .click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(loggedOut).toBe(true);
+});
