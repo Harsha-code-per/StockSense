@@ -1,4 +1,4 @@
-// Owner: Member 3. Create form for operations (Phase 2: receipt flow wired).
+// Owner: Member 3. Create form for operations (all four types).
 // zod + react-hook-form, server field_errors mapped onto the same fields.
 // The backend is authoritative for validation and stock; this form only
 // collects input and sends OperationCreate per docs/API.md.
@@ -30,7 +30,8 @@ import { DataState } from '@/components/ui/DataState';
 import { formErrors } from '@/components/ui/formErrors';
 import { LineEditor } from './LineEditor';
 
-// up to 3 decimals, > 0 — mirrors INVENTORY_RULES §Validation (UX only)
+// up to 3 decimals — mirrors INVENTORY_RULES §Validation (UX only; the
+// server re-checks everything).
 const quantity = z
   .string()
   .trim()
@@ -41,10 +42,15 @@ const quantity = z
   )
   .refine((value) => Number(value) > 0, 'Quantity must be greater than 0.');
 
-const lineSchema = z.object({
-  product_id: z.string().min(1, 'Choose a product.'),
-  quantity,
-});
+// counted_quantity ≥ 0 is valid for adjustments (zero is a legal count).
+const countedQuantity = z
+  .string()
+  .trim()
+  .min(1, 'Enter the counted quantity.')
+  .regex(
+    /^\d{1,15}(\.\d{1,3})?$/,
+    'Enter a non-negative quantity with up to 3 decimal places.',
+  );
 
 const baseSchema = z.object({
   source_location_id: z.string(),
@@ -52,59 +58,117 @@ const baseSchema = z.object({
   partner_name: z.string().trim().max(120),
   scheduled_date: z.string(),
   notes: z.string().trim().max(2000),
-  lines: z.array(lineSchema).min(1, 'Add at least one line.'),
+  lines: z
+    .array(
+      z.object({
+        product_id: z.string().min(1, 'Choose a product.'),
+        quantity: z.string().trim(),
+        counted_quantity: z.string().trim(),
+      }),
+    )
+    .min(1, 'Add at least one line.'),
 });
 
 export type OperationFormValues = z.infer<typeof baseSchema>;
 
 // Per-type field configuration (docs/API.md "OperationCreate" per type)
 const TYPE_CONFIG: Record<
-  'receipt' | 'delivery',
+  OperationType,
   {
-    locationField: 'source_location_id' | 'destination_location_id';
-    locationLabel: string;
-    locationRequired: string;
-    partnerLabel: string;
-    partnerPlaceholder: string;
+    source?: { label: string; required: string };
+    destination?: { label: string; required: string };
+    partner?: { label: string; placeholder: string };
+    lineKind: 'quantity' | 'counted';
+    /** lines show availability at the source location */
+    sourceAvailability: boolean;
   }
 > = {
   receipt: {
-    locationField: 'destination_location_id',
-    locationLabel: 'Destination location',
-    locationRequired: 'Choose a destination location.',
-    partnerLabel: 'Vendor',
-    partnerPlaceholder: 'e.g. Tata Steel Ltd',
+    destination: {
+      label: 'Destination location',
+      required: 'Choose a destination location.',
+    },
+    partner: { label: 'Vendor', placeholder: 'e.g. Tata Steel Ltd' },
+    lineKind: 'quantity',
+    sourceAvailability: false,
   },
   delivery: {
-    locationField: 'source_location_id',
-    locationLabel: 'Source location',
-    locationRequired: 'Choose a source location.',
-    partnerLabel: 'Customer',
-    partnerPlaceholder: 'e.g. BuildCo',
+    source: { label: 'Source location', required: 'Choose a source location.' },
+    partner: { label: 'Customer', placeholder: 'e.g. BuildCo' },
+    lineKind: 'quantity',
+    sourceAvailability: true,
+  },
+  transfer: {
+    source: { label: 'Source location', required: 'Choose a source location.' },
+    destination: {
+      label: 'Destination location',
+      required: 'Choose a destination location.',
+    },
+    lineKind: 'quantity',
+    sourceAvailability: true,
+  },
+  adjustment: {
+    source: { label: 'Counted location', required: 'Choose a location.' },
+    lineKind: 'counted',
+    sourceAvailability: true,
   },
 };
 
 function makeSchema(type: OperationType) {
-  const config = TYPE_CONFIG[type as 'receipt' | 'delivery'];
+  const config = TYPE_CONFIG[type];
   return baseSchema.superRefine((values, ctx) => {
-    if (!values[config.locationField]) {
+    if (config.source && !values.source_location_id) {
       ctx.addIssue({
         code: 'custom',
-        path: [config.locationField],
-        message: config.locationRequired,
+        path: ['source_location_id'],
+        message: config.source.required,
+      });
+    }
+    if (config.destination && !values.destination_location_id) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['destination_location_id'],
+        message: config.destination.required,
+      });
+    }
+    if (
+      type === 'transfer' &&
+      values.source_location_id &&
+      values.source_location_id === values.destination_location_id
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['destination_location_id'],
+        message: 'Source and destination must be different locations.',
       });
     }
     const seen = new Set<string>();
     values.lines.forEach((line, index) => {
-      if (!line.product_id) return;
-      if (seen.has(line.product_id)) {
+      if (line.product_id) {
+        if (seen.has(line.product_id)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['lines', index, 'product_id'],
+            message: 'This product is already on another line.',
+          });
+        }
+        seen.add(line.product_id);
+      }
+      const check =
+        config.lineKind === 'counted'
+          ? countedQuantity.safeParse(line.counted_quantity)
+          : quantity.safeParse(line.quantity);
+      if (!check.success) {
         ctx.addIssue({
           code: 'custom',
-          path: ['lines', index, 'product_id'],
-          message: 'This product is already on another line.',
+          path: [
+            'lines',
+            index,
+            config.lineKind === 'counted' ? 'counted_quantity' : 'quantity',
+          ],
+          message: check.error.issues[0]?.message ?? 'Invalid value.',
         });
       }
-      seen.add(line.product_id);
     });
   });
 }
@@ -125,7 +189,7 @@ export function OperationForm({ type }: { type: OperationType }) {
     '/api/products?page_size=100&is_active=true',
   );
   const label = TYPE_LABELS[type];
-  const config = TYPE_CONFIG[type as 'receipt' | 'delivery'];
+  const config = TYPE_CONFIG[type];
 
   const form = useForm<OperationFormValues>({
     resolver: zodResolver(makeSchema(type)),
@@ -135,7 +199,7 @@ export function OperationForm({ type }: { type: OperationType }) {
       partner_name: '',
       scheduled_date: '',
       notes: '',
-      lines: [{ product_id: '', quantity: '' }],
+      lines: [{ product_id: '', quantity: '', counted_quantity: '' }],
     },
   });
   const {
@@ -163,7 +227,9 @@ export function OperationForm({ type }: { type: OperationType }) {
       notes: values.notes || null,
       lines: values.lines.map((line) => ({
         product_id: Number(line.product_id),
-        quantity: line.quantity,
+        ...(config.lineKind === 'counted'
+          ? { counted_quantity: line.counted_quantity }
+          : { quantity: line.quantity }),
       })),
     };
     try {
@@ -196,6 +262,33 @@ export function OperationForm({ type }: { type: OperationType }) {
     'aria-describedby': errors[name] ? `${name}-error` : undefined,
   });
 
+  const locationSelect = (
+    which: 'source' | 'destination',
+    fieldConfig: NonNullable<(typeof config)['source']>,
+  ) => {
+    const name =
+      which === 'source' ? 'source_location_id' : 'destination_location_id';
+    return (
+      <Field name={name} label={fieldConfig.label} error={errors[name]?.message}>
+        <select
+          {...props(name)}
+          className={selectClass}
+          disabled={locations.loading}
+          {...register(name)}
+        >
+          <option value="">
+            {locations.loading ? 'Loading locations…' : 'Choose a location'}
+          </option>
+          {locations.data?.map((location) => (
+            <option key={location.id} value={location.id}>
+              {location.full_name}
+            </option>
+          ))}
+        </select>
+      </Field>
+    );
+  };
+
   return (
     <FormProvider {...form}>
       <form
@@ -205,39 +298,22 @@ export function OperationForm({ type }: { type: OperationType }) {
       >
         <fieldset disabled={isSubmitting} className="space-y-6">
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field
-              name={config.locationField}
-              label={config.locationLabel}
-              error={errors[config.locationField]?.message}
-            >
-              <select
-                {...props(config.locationField)}
-                className={selectClass}
-                disabled={locations.loading}
-                {...register(config.locationField)}
+            {config.source && locationSelect('source', config.source)}
+            {config.destination && locationSelect('destination', config.destination)}
+            {config.partner && (
+              <Field
+                name="partner_name"
+                label={config.partner.label}
+                error={errors.partner_name?.message}
               >
-                <option value="">
-                  {locations.loading ? 'Loading locations…' : 'Choose a location'}
-                </option>
-                {locations.data?.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.full_name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field
-              name="partner_name"
-              label={config.partnerLabel}
-              error={errors.partner_name?.message}
-            >
-              <Input
-                {...props('partner_name')}
-                placeholder={config.partnerPlaceholder}
-                autoComplete="off"
-                {...register('partner_name')}
-              />
-            </Field>
+                <Input
+                  {...props('partner_name')}
+                  placeholder={config.partner.placeholder}
+                  autoComplete="off"
+                  {...register('partner_name')}
+                />
+              </Field>
+            )}
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field
@@ -272,8 +348,9 @@ export function OperationForm({ type }: { type: OperationType }) {
             ) : (
               <LineEditor
                 products={products.data?.items ?? []}
+                lineKind={config.lineKind}
                 availabilityLocationId={
-                  type === 'delivery' ? sourceLocationId : undefined
+                  config.sourceAvailability ? sourceLocationId : undefined
                 }
               />
             )}
