@@ -5,6 +5,8 @@ Next.js (App Router) + TypeScript + Tailwind CSS + shadcn/ui + react-hook-form +
 See [ownership map](../docs/TEAM_PLAN.md#file-ownership).
 
 ## Run locally
+Use Node.js 24 or newer (the same version used in CI).
+
 ```bash
 cd frontend
 npm install
@@ -19,6 +21,8 @@ The backend must be running; `/api/*` is proxied to it by `next.config.ts` rewri
 | Dev server | `npm run dev` |
 | Lint | `npm run lint` |
 | Production build (what CI runs) | `npm run build` |
+| API client checks | `npm test` |
+| Browser checks (after building) | `npx playwright install chromium && npm run test:e2e` |
 | Add a shadcn component (**M2 only**) | `npx shadcn@latest add <component>` |
 
 ## Layout
@@ -45,3 +49,27 @@ src/
 - Every form: zod schema + inline errors + server `field_errors` mapped to fields.
 - Status colors: Draft gray · Waiting amber · Ready blue · Done green · Canceled red.
 - UI conventions: [ARCHITECTURE § UI conventions](../docs/ARCHITECTURE.md#ui-conventions-consistency-is-judged).
+
+## Shared frontend helpers
+
+Use `api<T>('/api/...', { method, body: JSON.stringify(values) })` from `@/lib/api`.
+It includes the same-origin session cookie, disables response caching, and throws
+`ApiError` with `status`, `code`, `details`, and `field_errors`. A 204 response returns
+`undefined`. Do not catch a failed request and replace it with mock inventory.
+
+`useApi<T>(path)` provides loading/error state, aborts obsolete requests, and exposes
+`reload()` after mutations. `PageHeader`, `DataState`, `Field`, and `formErrors` provide
+shared page, loading/error, and form conventions. New shadcn components must import
+`cn` from `@/lib/utils`; reuse that utility rather than installing another package.
+
+Browser tests use contract-shaped responses only inside `tests/`. They cover desktop,
+tablet, and mobile layouts; the production app always calls the real API. Live login
+and complete inventory lifecycle verification require Members 3 and 4's implementations.
+
+## Frontend deployment
+
+Import this repository into Vercel with Root Directory `frontend` and the Next.js
+preset. Set the server-only `BACKEND_URL` to the team's deployed backend origin;
+do not prefix it with `NEXT_PUBLIC_`. Vercel runs `npm run build`. All browser requests
+continue to use `/api/*` through the Next.js rewrite. Deployment account configuration
+and the final backend URL must be supplied by the team.
