@@ -78,7 +78,7 @@ docker compose up -d db                      # PostgreSQL 16
 
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 alembic upgrade head && python -m app.seed
 uvicorn app.main:app --reload                # http://localhost:8000/docs
