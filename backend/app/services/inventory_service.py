@@ -3,12 +3,13 @@
 Stock is WRITTEN only by operation_service. Nothing here mutates balances.
 """
 
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import Subquery, func, select, text
 from sqlalchemy.orm import Session, contains_eager
 
-from app.models import Location, Product, StockBalance, StockLedger, Warehouse
+from app.models import Location, Operation, Product, StockBalance, StockLedger, Warehouse
 from app.schemas.common import Page, PageParams, UserRef
 from app.schemas.inventory import BalanceOut, IntegrityMismatch, IntegrityOut, LedgerEntryOut
 from app.services.common import paginate
@@ -141,6 +142,60 @@ def recent_moves(db: Session, product_id: int, limit: int = 10) -> list[LedgerEn
         .limit(limit)
     )
     return [ledger_entry_out(e) for e in rows]
+
+
+def list_ledger(
+    db: Session,
+    paging: PageParams,
+    *,
+    product_id: int | None = None,
+    location_id: int | None = None,
+    warehouse_id: int | None = None,
+    movement_type: str | None = None,
+    operation_id: int | None = None,
+    search: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> Page[LedgerEntryOut]:
+    """Move history, newest first."""
+    stmt = select(StockLedger).order_by(StockLedger.id.desc())
+    if product_id is not None:
+        stmt = stmt.where(StockLedger.product_id == product_id)
+    if location_id is not None:
+        stmt = stmt.where(StockLedger.location_id == location_id)
+    if warehouse_id is not None:
+        stmt = stmt.where(
+            StockLedger.location_id.in_(
+                select(Location.id).where(Location.warehouse_id == warehouse_id)
+            )
+        )
+    if movement_type:
+        stmt = stmt.where(StockLedger.movement_type == movement_type)
+    if operation_id is not None:
+        stmt = stmt.where(StockLedger.operation_id == operation_id)
+    if search:
+        stmt = stmt.where(
+            StockLedger.product_id.in_(
+                select(Product.id).where(
+                    Product.sku.icontains(search, autoescape=True)
+                    | Product.name.icontains(search, autoescape=True)
+                )
+            )
+            | StockLedger.operation_id.in_(
+                select(Operation.id).where(Operation.reference.icontains(search, autoescape=True))
+            )
+        )
+    if date_from:
+        stmt = stmt.where(StockLedger.created_at >= date_from)
+    if date_to:
+        stmt = stmt.where(StockLedger.created_at < date_to + timedelta(days=1))
+    rows, total = paginate(db, stmt, paging)
+    return Page(
+        items=[ledger_entry_out(r[0]) for r in rows],
+        total=total,
+        page=paging.page,
+        page_size=paging.page_size,
+    )
 
 
 _INTEGRITY_SQL = text(

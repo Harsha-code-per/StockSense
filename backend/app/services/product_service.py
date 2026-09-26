@@ -3,9 +3,10 @@ from decimal import Decimal
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
-from app.errors import field_error
-from app.models import Category, Product, StockBalance
+from app.errors import ValidationFailed, field_error
+from app.models import Category, Product, StockBalance, User
 from app.schemas.common import Page, PageParams
+from app.schemas.operation import LineIn, OperationCreate
 from app.schemas.product import (
     CategoryCreate,
     CategoryOut,
@@ -15,6 +16,7 @@ from app.schemas.product import (
     ProductUpdate,
     StockByLocation,
 )
+from app.services import operation_service
 from app.services.common import get_or_404, paginate, require_ref
 from app.services.inventory_service import (
     on_hand_subquery,
@@ -127,13 +129,28 @@ def get_product(db: Session, product_id: int) -> ProductDetail:
     )
 
 
-def create_product(db: Session, data: ProductCreate) -> ProductOut:
+def create_product(db: Session, data: ProductCreate, user: User) -> ProductOut:
+    """Create a product. Initial stock is posted as a validated adjustment in the SAME
+    transaction, so opening stock has ledger evidence like every other change."""
     if data.category_id is not None:
         require_ref(db, Category, data.category_id, "category_id", "Category")
-    product = Product(**data.model_dump())
+    product = Product(**data.model_dump(exclude={"initial_quantity", "initial_location_id"}))
     db.add(product)
-    db.commit()  # duplicate SKU -> IntegrityError -> 409 DUPLICATE (field "sku")
-    return product_out(product, Decimal("0"))
+    db.flush()  # duplicate SKU -> IntegrityError -> 409 DUPLICATE (field "sku")
+    if data.initial_quantity > 0:
+        opening = OperationCreate(
+            type="adjustment",
+            source_location_id=data.initial_location_id,
+            notes="Initial stock",
+            lines=[LineIn(product_id=product.id, counted_quantity=data.initial_quantity)],
+        )
+        try:
+            op = operation_service.build_operation(db, opening, user)
+        except ValidationFailed as e:  # report the location problem on the product form field
+            raise field_error("initial_location_id", "Location not found or inactive.") from e
+        operation_service.apply_stock(db, op, user)
+    db.commit()
+    return product_out(product, data.initial_quantity)
 
 
 def update_product(db: Session, product_id: int, data: ProductUpdate) -> ProductOut:
