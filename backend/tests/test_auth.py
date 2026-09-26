@@ -312,3 +312,78 @@ def test_otp_expired(client, db, monkeypatch):
     r = client.post("/api/auth/verify-otp", json={"email": "heidi@test.dev", "otp": otp})
     assert r.status_code == 400
     assert r.json()["code"] == "OTP_EXPIRED"
+
+
+def test_dashboard_requires_auth(client):
+    r = client.get("/api/dashboard/summary")
+    assert r.status_code == 401
+    assert r.json()["code"] == "UNAUTHORIZED"
+
+
+def test_dashboard_summary_with_metrics(manager):
+    from tests.helpers import create, run, setup_world
+
+    w = setup_world(manager)
+    # Receive 10 kg Steel Rod (min 20, max 200) -> on_hand=10 < min=20 -> low stock
+    run(manager, "receipt", [{"product_id": w["steel"], "quantity": "10"}], dst=w["loc"]["Stock"])
+
+    # Create open operations (receipt, delivery, transfer)
+    create(
+        manager,
+        "receipt",
+        [{"product_id": w["steel"], "quantity": "50"}],
+        dst=w["loc"]["Stock"],
+    )
+    create(
+        manager,
+        "delivery",
+        [{"product_id": w["steel"], "quantity": "5"}],
+        src=w["loc"]["Stock"],
+    )
+    create(
+        manager,
+        "transfer",
+        [{"product_id": w["steel"], "quantity": "2"}],
+        src=w["loc"]["Stock"],
+        dst=w["loc"]["Rack A"],
+    )
+
+    r = manager.get("/api/dashboard/summary")
+    assert r.status_code == 200, r.json()
+    data = r.json()
+
+    # Verify KPI counts
+    kpis = data["kpis"]
+    assert kpis["pending_receipts"] >= 1
+    assert kpis["pending_deliveries"] >= 1
+    assert kpis["scheduled_transfers"] >= 1
+    assert kpis["low_stock"] >= 1
+    assert data["ledger_ok"] is True
+
+    # Verify low_stock_items contains Steel Rod
+    low_item = next((item for item in data["low_stock_items"] if item["sku"] == "STL001"), None)
+    assert low_item is not None
+    assert low_item["stock_status"] == "low"
+    assert low_item["on_hand"] == "10.000"
+    assert low_item["min_qty"] == "20.000"
+    assert low_item["suggested_order"] == "190.000"
+
+    # Verify recent operations list
+    assert len(data["recent_operations"]) >= 3
+
+
+def test_dashboard_filters(manager):
+    from tests.helpers import setup_world
+
+    w = setup_world(manager)
+    wh_id = w["wh"]["id"]
+
+    # Filter with valid warehouse_id
+    r = manager.get("/api/dashboard/summary", params={"warehouse_id": wh_id})
+    assert r.status_code == 200
+    assert r.json()["ledger_ok"] is True
+
+    # Filter with non-existent warehouse_id (0 open operations, 0 products in stock)
+    r_empty = manager.get("/api/dashboard/summary", params={"warehouse_id": 99999})
+    assert r_empty.status_code == 200
+    assert r_empty.json()["kpis"]["pending_receipts"] == 0
