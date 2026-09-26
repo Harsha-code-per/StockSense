@@ -22,6 +22,14 @@ const SPRING = { stiffness: 120, damping: 25, mass: 0.5 };
  * Layers (BG_GRID, AMBIENT, WAREHOUSE, FOREGROUND_GLOW) never touch the real
  * form: no shared ancestor transform, no shared motion values.
  *
+ * The WAREHOUSE video is confined to a right-anchored lane (~48vw) on large
+ * screens only — the centered auth column (brand, card, footer) sits to its
+ * left under a wide, strong background-to-transparent mask so the scene
+ * reads as an environmental strip beside the form, not a dark backdrop
+ * directly underneath it. Below `lg` the auth column has no room to share
+ * the viewport with a video lane at all (the card is nearly full-width), so
+ * the video is hidden there and only the light grid/glow layers remain.
+ *
  * Scroll-linked motion binds to this component's own scroll progress rather
  * than manufacturing extra page height — the login form fits in one viewport
  * by design, so the scroll effect only engages if the viewport is naturally
@@ -128,9 +136,9 @@ export function LoginEnvironment() {
         <div className="absolute -bottom-24 -left-24 size-80 rounded-full bg-amber-400/10 blur-3xl" />
       </motion.div>
 
-      {/* WAREHOUSE */}
+      {/* WAREHOUSE — right-anchored lane, large screens only */}
       <motion.div
-        className="absolute inset-0 flex items-center justify-end pr-0 lg:pr-[8%]"
+        className="absolute inset-y-0 right-0 hidden w-[48%] items-center justify-center lg:flex"
         style={{
           x: interactiveParallax ? warehousePointerX : 0,
           y: warehouseY,
@@ -148,13 +156,19 @@ export function LoginEnvironment() {
           playsInline
           loop
           preload="metadata"
-          className="h-[70%] w-[60%] max-w-3xl rounded-2xl object-cover opacity-70"
+          className="h-[80%] w-full max-w-2xl object-cover opacity-80"
+          style={{
+            maskImage:
+              'radial-gradient(ellipse 72% 68% at 62% 50%, black 45%, transparent 100%)',
+            WebkitMaskImage:
+              'radial-gradient(ellipse 72% 68% at 62% 50%, black 45%, transparent 100%)',
+          }}
         />
       </motion.div>
 
-      {/* Bottom mask so the video blends into the page instead of a hard rectangle edge */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-background to-transparent" />
-      <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-background via-background/70 to-transparent" />
+      {/* Strong left mask: fully protects the centered brand/card/footer column, then
+          fades out well before the warehouse lane so the two read as separate zones. */}
+      <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-background from-35% via-background/95 via-60% to-transparent lg:w-[70%]" />
 
       {/* FOREGROUND_GLOW */}
       <motion.div
