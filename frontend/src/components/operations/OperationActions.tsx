@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { ApiError } from '@/lib/api';
-import type { Operation, OperationType } from '@/lib/types';
+import type { Operation } from '@/lib/types';
 import {
   cancelOperation,
   confirmOperation,
@@ -31,14 +31,17 @@ type Action = 'confirm' | 'validate' | 'cancel';
 export function OperationActions({
   operation,
   onChanged,
+  validateDisabledReason,
 }: {
   operation: Operation;
   onChanged: (updated: Operation) => void;
+  /** UX hint only (e.g. adjustments are manager-only); the backend enforces */
+  validateDisabledReason?: string;
 }) {
   const [pending, setPending] = useState<Action | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  const label = TYPE_LABELS[operation.type as OperationType];
+  const label = TYPE_LABELS[operation.type];
   const { status } = operation;
   const canConfirm = status === 'draft' || status === 'waiting';
   const canValidate =
@@ -108,13 +111,20 @@ export function OperationActions({
         </Button>
       )}
       {canValidate && (
-        <Button
-          type="button"
-          disabled={pending !== null}
-          onClick={() => run('validate')}
-        >
-          {pending === 'validate' ? 'Validating…' : 'Validate'}
-        </Button>
+        <span className="inline-flex flex-col">
+          <Button
+            type="button"
+            disabled={pending !== null || !!validateDisabledReason}
+            onClick={() => run('validate')}
+          >
+            {pending === 'validate' ? 'Validating…' : 'Validate'}
+          </Button>
+          {validateDisabledReason && (
+            <span className="mt-1 text-xs text-muted-foreground">
+              {validateDisabledReason}
+            </span>
+          )}
+        </span>
       )}
       {canCancel && (
         <>
